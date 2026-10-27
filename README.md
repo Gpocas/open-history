@@ -35,11 +35,3 @@ open-history --help       # todas as opções
 ## Documentação
 
 - [Funcionalidades e atalhos da TUI](docs/funcionalidades.md)
-
-## Desenvolvimento
-
-```bash
-bun run index.ts   # modo de desenvolvimento
-bun run build      # gera ./dist/index.js
-bun test           # testes unitários + TUI
-```
