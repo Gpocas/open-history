@@ -8,31 +8,28 @@
   "module": "index.ts",
   "type": "module",
   "bin": {
-    "open-history": "./dist/index.js"
+    "open-history": "./index.ts"
   },
   "files": [
-    "dist",
     "src",
     "index.ts",
-    "build.ts",
     "bunfig.toml",
     "tsconfig.json"
   ],
   "scripts": {
     "start": "bun run index.ts",
     "build": "bun run build.ts",
-    "prepare": "bun run build.ts",
     "test": "bun test ./test"
   },
   "devDependencies": {
     "@types/bun": "latest"
   },
-  "peerDependencies": {
-    "typescript": "^7"
-  },
   "dependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/preset-typescript": "7.27.1",
     "@opentui/core": "0.7.0",
     "@opentui/solid": "0.7.0",
+    "babel-preset-solid": "1.9.12",
     "solid-js": "1.9.12"
   }
 }

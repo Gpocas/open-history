@@ -1,10 +1,5 @@
 #!/usr/bin/env bun
 import { createCliRenderer } from "@opentui/core";
-import { ensureSolidTransformPlugin } from "@opentui/solid/bun-plugin";
-
-// Must be called BEFORE importing solid-js or @opentui/solid so solid-js/dist/server.js is redirected to solid.js
-ensureSolidTransformPlugin();
-
 import type { HstrSelectionOutcome } from "./src/app.tsx";
 import { Blacklist } from "./src/blacklist.ts";
 import {
@@ -21,6 +16,7 @@ import {
   removeLastHistoryEntry,
 } from "./src/history.ts";
 import { makeSelection } from "./src/matcher.ts";
+import { registerOpenHistorySolidPlugin } from "./src/solid-runtime.ts";
 import {
   buildShellExecutionSpawn,
   fillTerminalInput,
@@ -31,11 +27,8 @@ import {
   tryTiocstiInsert,
 } from "./src/utils.ts";
 
-// Ensure Solid JSX transform is active even when invoked outside the project directory
-ensureSolidTransformPlugin();
-
-export { mountHstrApp } from "./src/app.tsx";
-export { render } from "@opentui/solid";
+// Register Solid JSX + client runtime plugin BEFORE dynamically importing @opentui/solid or ./src/app.tsx
+registerOpenHistorySolidPlugin();
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   const isTiocsti = isTiocstiSupported();
