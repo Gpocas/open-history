@@ -7,7 +7,6 @@ Recriação moderna do [HSTR](https://github.com/dvorka/hstr) (Bash & Zsh Shell 
 - [Principais Funcionalidades](#principais-funcionalidades)
 - [Instalação](#instalação)
   - [Direto do GitHub (sem precisar estar publicado no npmjs)](#direto-do-github-sem-precisar-estar-publicado-no-npmjs)
-  - [A partir do repositório local](#a-partir-do-repositório-local)
 - [Configuração no Shell (`Ctrl+R` e alias `hh`)](#configuração-no-shell-ctrlr-e-alias-hh)
   - [Zsh (`~/.zshrc`)](#zsh-zshrc)
   - [Bash (`~/.bashrc`)](#bash-bashrc)
