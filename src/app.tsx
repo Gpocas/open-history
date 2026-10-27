@@ -7,6 +7,7 @@ import {
   createRendererClipboardAdapter,
 } from "@opentui/core";
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid";
+import pkg from "../package.json" with { type: "json" };
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import {
   HSTR_CASE_LABELS,
@@ -24,6 +25,11 @@ import {
   removeFromRanked,
   removeFromRaw,
   removeFromSystemHistory,
+  removeManyFromRanked,
+  removeManyFromRaw,
+  removeManyFromSystemHistory,
+  removeOneFromRaw,
+  removeOneFromSystemHistory,
 } from "./history.ts";
 import {
   buildHighlightedSegments,
@@ -124,6 +130,68 @@ const EDIT_DIALOG_OPTIONS: readonly EditDialogOption[] = [
   },
 ];
 
+export type DeleteDialogOptionId = "delete-one" | "delete-all" | "delete-filtered" | "cancel";
+
+interface DeleteDialogOption {
+  id: DeleteDialogOptionId;
+  title: string;
+  description: string;
+  shortcut: string;
+}
+
+interface DeleteDialogState {
+  cmd: string;
+  /** Unique commands matching the current filter when the dialog was opened */
+  filtered: string[];
+  favorites: boolean;
+  hasFilter: boolean;
+}
+
+const buildDeleteDialogOptions = (state: DeleteDialogState): DeleteDialogOption[] => {
+  const options: DeleteDialogOption[] = [];
+  if (state.favorites) {
+    options.push({
+      id: "delete-all",
+      title: "Delete this favorite",
+      description: "Remove only the selected favorite",
+      shortcut: "a / enter",
+    });
+  } else {
+    options.push(
+      {
+        id: "delete-one",
+        title: "Delete this line only",
+        description: "Remove only the most recent occurrence from history",
+        shortcut: "l / enter",
+      },
+      {
+        id: "delete-all",
+        title: "Delete all occurrences",
+        description: "Remove every occurrence of this command from history",
+        shortcut: "a",
+      },
+    );
+  }
+  const n = state.filtered.length;
+  options.push({
+    id: "delete-filtered",
+    title: state.hasFilter
+      ? `Delete all ${n} filtered item${n === 1 ? "" : "s"}`
+      : `Delete ALL ${n} item${n === 1 ? "" : "s"} (no filter)`,
+    description: state.hasFilter
+      ? "Remove every command matching the current filter"
+      : "No filter is active: this removes the whole list",
+    shortcut: "f",
+  });
+  options.push({
+    id: "cancel",
+    title: "Cancel",
+    description: "Return to command history search",
+    shortcut: "esc",
+  });
+  return options;
+};
+
 export interface SplitExecutionState {
   direction: SplitDirection;
   command: string;
@@ -196,7 +264,6 @@ export interface HstrAppProps {
 
 type NotificationState =
   | { type: "none" }
-  | { type: "confirm-delete"; cmd: string }
   | { type: "deleted"; text: string }
   | { type: "favorite-added"; text: string }
   | { type: "copied"; text: string }
@@ -233,6 +300,12 @@ export function HstrApp(props: HstrAppProps) {
   const [runDialogSelectedIdx, setRunDialogSelectedIdx] = createSignal<number>(0);
   const [editDialogCommand, setEditDialogCommand] = createSignal<string | null>(null);
   const [editDialogSelectedIdx, setEditDialogSelectedIdx] = createSignal<number>(0);
+  const [deleteDialog, setDeleteDialog] = createSignal<DeleteDialogState | null>(null);
+  const [deleteDialogSelectedIdx, setDeleteDialogSelectedIdx] = createSignal<number>(0);
+  const deleteDialogOptions = createMemo(() => {
+    const state = deleteDialog();
+    return state ? buildDeleteDialogOptions(state) : [];
+  });
   const [isEditingCommandLine, setIsEditingCommandLine] = createSignal<boolean>(false);
   const [splitPane, setSplitPane] = createSignal<SplitExecutionState | null>(null);
   const [spinnerFrameIdx, setSpinnerFrameIdx] = createSignal<number>(0);
@@ -268,7 +341,12 @@ export function HstrApp(props: HstrAppProps) {
 
   const focusInput = () => {
     if (!inputRef || inputRef.isDestroyed) return;
-    if (runDialogCommand() !== null || editDialogCommand() !== null) return;
+    if (
+      runDialogCommand() !== null ||
+      editDialogCommand() !== null ||
+      deleteDialog() !== null
+    )
+      return;
     inputRef.focus();
   };
 
@@ -433,6 +511,18 @@ export function HstrApp(props: HstrAppProps) {
     return systemOccurrences || rawOccurrences;
   };
 
+  const afterDelete = () => {
+    const newSize = selectionItems().length;
+    if (newSize === 0) {
+      resetSelection();
+      return;
+    }
+
+    const currentCursor = selectionCursor();
+    const nextCursor = Math.min(currentCursor, newSize - 1);
+    selectItemAt(nextCursor);
+  };
+
   const performDelete = (cmd: string) => {
     const deletedOccurrences = removeFromHistoryModel(cmd);
     if (view() === HstrView.FAVORITES) {
@@ -448,16 +538,75 @@ export function HstrApp(props: HstrAppProps) {
         })`,
       });
     }
+    afterDelete();
+  };
 
-    const newSize = selectionItems().length;
-    if (newSize === 0) {
-      resetSelection();
-      return;
+  // Removes only the most recent occurrence of `cmd` (a single history line)
+  const performDeleteOne = (cmd: string) => {
+    const rawRemoved = removeOneFromRaw(cmd, props.history);
+    if (rawRemoved > 0) {
+      removeOneFromSystemHistory(cmd, props.history, props.isZsh);
     }
+    // Keep the ranked entry while other occurrences of the command remain
+    if (rawRemoved === 0 || !props.history.rawItems.includes(cmd)) {
+      removeFromRanked(cmd, props.history);
+    }
+    setModelVersion((v) => v + 1);
+    setNotification({
+      type: "deleted",
+      text: `History line '${cmd}' deleted (1 occurrence)`,
+    });
+    afterDelete();
+  };
 
-    const currentCursor = selectionCursor();
-    const nextCursor = Math.min(currentCursor, newSize - 1);
-    selectItemAt(nextCursor);
+  // Removes every command matching the current filter
+  const performDeleteFiltered = (commands: string[], favorites: boolean) => {
+    if (favorites) {
+      for (const cmd of commands) {
+        props.favorites.remove(cmd);
+      }
+    } else {
+      const set = new Set(commands);
+      const rawRemoved = removeManyFromRaw(set, props.history);
+      removeManyFromRanked(set, props.history);
+      if (rawRemoved > 0) {
+        removeManyFromSystemHistory(set, props.history, props.isZsh);
+      }
+    }
+    setModelVersion((v) => v + 1);
+    setNotification({
+      type: "deleted",
+      text: `${commands.length} filtered item${commands.length === 1 ? "" : "s"} deleted`,
+    });
+    afterDelete();
+  };
+
+  const openDeleteDialog = (cmd: string) => {
+    if (inputRef && !inputRef.isDestroyed) {
+      inputRef.blur();
+    }
+    const filtered = Array.from(new Set(selectionItems().map((item) => item.command)));
+    setDeleteDialogSelectedIdx(0);
+    setDeleteDialog({
+      cmd,
+      filtered,
+      favorites: view() === HstrView.FAVORITES,
+      hasFilter: pattern().length > 0,
+    });
+  };
+
+  const triggerDeleteDialogOption = (optionId: DeleteDialogOptionId) => {
+    const state = deleteDialog();
+    if (!state) return;
+    setDeleteDialog(null);
+    if (optionId === "delete-one") {
+      performDeleteOne(state.cmd);
+    } else if (optionId === "delete-all") {
+      performDelete(state.cmd);
+    } else if (optionId === "delete-filtered") {
+      performDeleteFiltered(state.filtered, state.favorites);
+    }
+    queueMicrotask(focusInput);
   };
 
   const executeCommandInSplit = (cmd: string, direction: SplitDirection) => {
@@ -825,18 +974,49 @@ export function HstrApp(props: HstrAppProps) {
       return;
     }
 
-    const currentNotification = notification();
-
-    if (currentNotification.type === "confirm-delete") {
+    // Modal key handling when the Delete Dialog is open
+    if (deleteDialog() !== null) {
       key.preventDefault();
-      const targetCmd = currentNotification.cmd;
-      if (key.name === "y" || key.sequence === "y" || key.sequence === "Y") {
-        performDelete(targetCmd);
+      const options = deleteDialogOptions();
+      const has = (id: DeleteDialogOptionId) => options.some((o) => o.id === id);
+      const seq = key.sequence?.toLowerCase();
+      if (
+        key.name === "escape" ||
+        (key.ctrl && (key.name === "g" || key.name === "c")) ||
+        (!key.ctrl && seq === "n")
+      ) {
+        triggerDeleteDialogOption("cancel");
         return;
       }
-      setNotification({ type: "none" });
+      if (key.name === "up" || key.name === "left" || (key.ctrl && key.name === "p")) {
+        setDeleteDialogSelectedIdx((idx) => (idx - 1 + options.length) % options.length);
+        return;
+      }
+      if (key.name === "down" || key.name === "right" || (key.ctrl && key.name === "n")) {
+        setDeleteDialogSelectedIdx((idx) => (idx + 1) % options.length);
+        return;
+      }
+      if (!key.ctrl && seq === "l" && has("delete-one")) {
+        triggerDeleteDialogOption("delete-one");
+        return;
+      }
+      if (!key.ctrl && seq === "a" && has("delete-all")) {
+        triggerDeleteDialogOption("delete-all");
+        return;
+      }
+      if (!key.ctrl && seq === "f") {
+        triggerDeleteDialogOption("delete-filtered");
+        return;
+      }
+      if (key.name === "return" || key.name === "enter") {
+        const selectedOpt = options[deleteDialogSelectedIdx()] ?? options[0];
+        if (selectedOpt) triggerDeleteDialogOption(selectedOpt.id);
+        return;
+      }
       return;
     }
+
+    const currentNotification = notification();
 
     if (currentNotification.type !== "none") {
       setNotification({ type: "none" });
@@ -900,7 +1080,7 @@ export function HstrApp(props: HstrAppProps) {
           performDelete(cmd);
           return;
         }
-        setNotification({ type: "confirm-delete", cmd });
+        openDeleteDialog(cmd);
       }
       return;
     }
@@ -1191,7 +1371,7 @@ export function HstrApp(props: HstrAppProps) {
     >
       <box flexDirection="row" gap={1} flexShrink={1}>
         <text fg={accent()} attributes={TextAttributes.BOLD} wrapMode="none" flexShrink={0}>
-          {theme().mono ? "- HISTORY -" : "▪ HISTORY"}
+          {theme().mono ? `- v${pkg.version} -` : `▪ v${pkg.version}`}
         </text>
         <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
           {`view:${HSTR_VIEW_LABELS[view()]} ▾`}
@@ -1445,7 +1625,8 @@ export function HstrApp(props: HstrAppProps) {
               if (
                 !el.isDestroyed &&
                 runDialogCommand() === null &&
-                editDialogCommand() === null
+                editDialogCommand() === null &&
+                deleteDialog() === null
               ) {
                 el.focus();
               }
@@ -1514,20 +1695,6 @@ export function HstrApp(props: HstrAppProps) {
     const notif = activeNotification();
     const w = Math.max(1, historyPaneWidth() - 3);
     const t = theme();
-
-    if (notif.type === "confirm-delete") {
-      const msg =
-        view() === HstrView.FAVORITES
-          ? `Do you want to delete favorites item '${notif.cmd}'? y/n`
-          : `Do you want to delete all occurrences of '${notif.cmd}'? y/n`;
-      return {
-        isAlert: true,
-        rail: t.text.feedback.error,
-        fg: t.text.feedback.error,
-        bg: t.background.feedback.error,
-        text: msg.slice(0, w),
-      };
-    }
 
     if (notif.type === "deleted" || notif.type === "regexp-error") {
       return {
@@ -2251,6 +2418,145 @@ export function HstrApp(props: HstrAppProps) {
     </Show>
   );
 
+  // Modal Dialog for deleting one line, all occurrences, or everything in the current filter
+  const renderDeleteDialogModal = () => (
+    <Show when={deleteDialog()} keyed>
+      {(state) => {
+        const dialogW = () => Math.min(64, Math.max(36, dimensions().width - 4));
+        return (
+          <box
+            position="absolute"
+            left={0}
+            top={0}
+            width={dimensions().width}
+            height={dimensions().height}
+            alignItems="center"
+            justifyContent="center"
+            zIndex={3000}
+            backgroundColor={RGBA.fromInts(0, 0, 0, 150)}
+            onMouseUp={() => triggerDeleteDialogOption("cancel")}
+          >
+            <box
+              width={dialogW()}
+              flexDirection="column"
+              border={true}
+              borderColor={theme().text.feedback.error}
+              backgroundColor={theme().background.raised.base}
+              paddingTop={1}
+              paddingBottom={1}
+              paddingLeft={2}
+              paddingRight={2}
+              gap={1}
+              onMouseUp={(e: { stopPropagation(): void }) => e.stopPropagation()}
+            >
+              <box flexDirection="row" justifyContent="space-between" width="100%">
+                <text fg={theme().text.base} attributes={TextAttributes.BOLD} wrapMode="none">
+                  {"Delete"}
+                </text>
+                <text
+                  fg={theme().text.faint}
+                  wrapMode="none"
+                  onMouseUp={() => triggerDeleteDialogOption("cancel")}
+                >
+                  {"esc"}
+                </text>
+              </box>
+
+              <box
+                width="100%"
+                paddingLeft={1}
+                paddingRight={1}
+                backgroundColor={theme().background.formfield.focused}
+              >
+                <text
+                  fg={theme().text.feedback.error}
+                  attributes={TextAttributes.BOLD}
+                  wrapMode="none"
+                >
+                  {`$ ${state.cmd.slice(0, Math.max(12, dialogW() - 10))}`}
+                </text>
+              </box>
+
+              <box flexDirection="column" width="100%">
+                <For each={deleteDialogOptions()}>
+                  {(opt, idx) => {
+                    const isActive = () => deleteDialogSelectedIdx() === idx();
+                    return (
+                      <box
+                        height={1}
+                        width="100%"
+                        flexDirection="row"
+                        justifyContent="space-between"
+                        paddingRight={1}
+                        backgroundColor={
+                          isActive()
+                            ? theme().background.action.primary.focused
+                            : theme().background.raised.base
+                        }
+                        onMouseMove={() => setDeleteDialogSelectedIdx(idx())}
+                        onMouseUp={() => triggerDeleteDialogOption(opt.id)}
+                      >
+                        <box flexDirection="row" flexShrink={1}>
+                          <text
+                            width={2}
+                            fg={isActive() ? theme().matchHighlight.fg : theme().text.faint}
+                            attributes={TextAttributes.BOLD}
+                            wrapMode="none"
+                          >
+                            {isActive() ? "┃ " : "  "}
+                          </text>
+                          <text
+                            fg={
+                              isActive()
+                                ? theme().text.action.primary.focused
+                                : theme().text.base
+                            }
+                            attributes={isActive() ? TextAttributes.BOLD : 0}
+                            wrapMode="none"
+                          >
+                            {opt.title}
+                          </text>
+                        </box>
+                        <text
+                          fg={isActive() ? theme().matchHighlight.fg : theme().text.faint}
+                          wrapMode="none"
+                        >
+                          {opt.shortcut}
+                        </text>
+                      </box>
+                    );
+                  }}
+                </For>
+              </box>
+
+              <box
+                width="100%"
+                flexDirection="row"
+                justifyContent="space-between"
+                backgroundColor={theme().background.raised.high}
+                paddingLeft={1}
+                paddingRight={1}
+              >
+                <text fg={theme().text.muted} wrapMode="none" flexShrink={1}>
+                  {(deleteDialogOptions()[deleteDialogSelectedIdx()] ?? deleteDialogOptions()[0])
+                    ?.description ?? ""}
+                </text>
+                <text
+                  fg={theme().matchHighlight.fg}
+                  attributes={TextAttributes.BOLD}
+                  wrapMode="none"
+                  flexShrink={0}
+                >
+                  {"enter"}
+                </text>
+              </box>
+            </box>
+          </box>
+        );
+      }}
+    </Show>
+  );
+
   // OpenCode-style Modal Dialog for Editing a Command (Command Line vs Default Terminal Editor)
   const renderEditDialogModal = () => (
     <Show when={editDialogCommand()} keyed>
@@ -2417,6 +2723,7 @@ export function HstrApp(props: HstrAppProps) {
       {renderSplitExecutionPane()}
       {renderRunDialogModal()}
       {renderEditDialogModal()}
+      {renderDeleteDialogModal()}
     </box>
   );
 }

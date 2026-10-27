@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { testRender } from "@opentui/solid";
+import pkg from "../package.json" with { type: "json" };
 import { HstrApp, type HstrSelectionOutcome } from "../src/app.tsx";
 import { Blacklist } from "../src/blacklist.ts";
 import {
@@ -386,7 +387,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     await setup.renderOnce();
     let frame = setup.captureCharFrame();
     expect(frame).toContain("Type to filter, UP/DOWN move");
-    expect(frame).toContain("▪ HISTORY");
+    expect(frame).toContain(`▪ v${pkg.version}`);
     expect(frame).toContain("view:ranking");
     expect(frame).toContain("git status");
     expect(frame).toContain("bun run index.ts");
@@ -561,13 +562,113 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
       await setup.renderOnce();
       setup.mockInput.pressKey("DELETE");
       await setup.renderOnce();
-      expect(setup.captureCharFrame()).toContain("Do you want to delete all occurrences of");
+      expect(setup.captureCharFrame()).toContain("Delete this line only");
 
-      // Confirm deletion with 'y'
-      await setup.mockInput.typeText("y");
+      // Delete all occurrences with 'a'
+      await setup.mockInput.typeText("a");
       await setup.renderOnce();
       expect(setup.captureCharFrame()).toContain("deleted (1 occurrence)");
       expect(history.count).toBe(2);
+
+      setup.renderer.destroy();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("delete dialog: single line only keeps other occurrences, cancel keeps everything", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "open-history-tui-"));
+    try {
+      const histFile = join(dir, ".bash_history");
+      writeFileSync(histFile, "ls\ngit status\nls\n", "utf-8");
+      const history = prioritizedHistoryCreate(RadixBigKeys.SKIP, new Set(), {
+        filePath: histFile,
+        isZsh: false,
+      });
+      const favorites = new FavoriteItems({ customFilePath: join(dir, ".hstr_favorites") });
+      favorites.load();
+
+      const setup = await testRender(
+        () => (
+          <HstrApp
+            config={createDefaultConfig()}
+            history={history}
+            favorites={favorites}
+            isZsh={false}
+            onExit={() => {}}
+          />
+        ),
+        { width: 90, height: 14 },
+      );
+      await setup.renderOnce();
+      await setup.mockInput.typeText("ls");
+      await setup.renderOnce();
+      setup.mockInput.pressArrow("down");
+      await setup.renderOnce();
+
+      // Cancel keeps everything
+      setup.mockInput.pressKey("DELETE");
+      await setup.renderOnce();
+      expect(setup.captureCharFrame()).toContain("Delete all 1 filtered item");
+      setup.mockInput.pressEscape();
+      await setup.renderOnce();
+      expect(history.rawCount).toBe(3);
+
+      // Single line removes only one occurrence
+      setup.mockInput.pressKey("DELETE");
+      await setup.renderOnce();
+      await setup.mockInput.typeText("l");
+      await setup.renderOnce();
+      expect(setup.captureCharFrame()).toContain("deleted (1 occurrence)");
+      expect(history.rawItems).toEqual(["git status", "ls"]);
+      expect(history.items).toContain("ls");
+      expect(readFileSync(histFile, "utf-8")).toBe("ls\ngit status\n");
+
+      setup.renderer.destroy();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("delete dialog: deletes all items matching the current filter", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "open-history-tui-"));
+    try {
+      const histFile = join(dir, ".bash_history");
+      writeFileSync(histFile, "git status\ngit log\ndocker ps\ngit status\n", "utf-8");
+      const history = prioritizedHistoryCreate(RadixBigKeys.SKIP, new Set(), {
+        filePath: histFile,
+        isZsh: false,
+      });
+      const favorites = new FavoriteItems({ customFilePath: join(dir, ".hstr_favorites") });
+      favorites.load();
+
+      const setup = await testRender(
+        () => (
+          <HstrApp
+            config={createDefaultConfig()}
+            history={history}
+            favorites={favorites}
+            isZsh={false}
+            onExit={() => {}}
+          />
+        ),
+        { width: 90, height: 14 },
+      );
+      await setup.renderOnce();
+      await setup.mockInput.typeText("git");
+      await setup.renderOnce();
+      setup.mockInput.pressArrow("down");
+      await setup.renderOnce();
+      setup.mockInput.pressKey("DELETE");
+      await setup.renderOnce();
+      expect(setup.captureCharFrame()).toContain("Delete all 2 filtered items");
+
+      await setup.mockInput.typeText("f");
+      await setup.renderOnce();
+      expect(setup.captureCharFrame()).toContain("2 filtered items deleted");
+      expect(history.items).toEqual(["docker ps"]);
+      expect(history.rawItems).toEqual(["docker ps"]);
+      expect(readFileSync(histFile, "utf-8")).toBe("docker ps\n");
 
       setup.renderer.destroy();
     } finally {

@@ -258,10 +258,40 @@ export function removeFromRanked(cmd: string, history: HistoryItems): number {
   return before - history.count;
 }
 
-export function removeFromSystemHistory(
-  cmd: string,
+export function removeOneFromRaw(cmd: string, history: HistoryItems): number {
+  // rawItems is most recent first, so this drops the most recent occurrence
+  const idx = history.rawItems.indexOf(cmd);
+  if (idx === -1) {
+    return 0;
+  }
+  history.rawItems.splice(idx, 1);
+  history.rawCount = history.rawItems.length;
+  return 1;
+}
+
+export function removeManyFromRaw(cmds: ReadonlySet<string>, history: HistoryItems): number {
+  const before = history.rawItems.length;
+  history.rawItems = history.rawItems.filter((item) => !cmds.has(item));
+  history.rawCount = history.rawItems.length;
+  return before - history.rawCount;
+}
+
+export function removeManyFromRanked(cmds: ReadonlySet<string>, history: HistoryItems): number {
+  const before = history.items.length;
+  history.items = history.items.filter((item) => !cmds.has(item));
+  history.count = history.items.length;
+  return before - history.count;
+}
+
+/**
+ * Rewrites the history file dropping lines whose command matches.
+ * With `lastOnly`, only the last (most recent) matching line is dropped.
+ */
+function rewriteSystemHistory(
   history: HistoryItems,
-  isZsh = isZshParentShell(),
+  isZsh: boolean,
+  matches: (cmd: string) => boolean,
+  lastOnly: boolean,
 ): number {
   const filePath = history.filePath;
   if (!existsSync(filePath)) {
@@ -273,14 +303,28 @@ export function removeFromSystemHistory(
     const rawLines = content.split("\n");
     const hasTrailingNewline = content.endsWith("\n");
     const lines = hasTrailingNewline ? rawLines.slice(0, -1) : rawLines;
+    const parsedLines = lines.map((line) => parseHistoryLine(line, isZsh) ?? line);
+
+    let onlyIdx = -1;
+    if (lastOnly) {
+      for (let i = parsedLines.length - 1; i >= 0; i--) {
+        if (matches(parsedLines[i]!)) {
+          onlyIdx = i;
+          break;
+        }
+      }
+      if (onlyIdx === -1) {
+        return 0;
+      }
+    }
 
     const kept: string[] = [];
     let occurrences = 0;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!;
-      const parsed = parseHistoryLine(line, isZsh) ?? line;
-      if (parsed === cmd) {
+      const remove = lastOnly ? i === onlyIdx : matches(parsedLines[i]!);
+      if (remove) {
         occurrences++;
         // If previous line in kept was a bash timestamp (#1234567890), remove it as well
         if (kept.length > 0 && isHistTimestamp(kept[kept.length - 1]!)) {
@@ -301,6 +345,30 @@ export function removeFromSystemHistory(
   } catch {
     return 0;
   }
+}
+
+export function removeFromSystemHistory(
+  cmd: string,
+  history: HistoryItems,
+  isZsh = isZshParentShell(),
+): number {
+  return rewriteSystemHistory(history, isZsh, (c) => c === cmd, false);
+}
+
+export function removeOneFromSystemHistory(
+  cmd: string,
+  history: HistoryItems,
+  isZsh = isZshParentShell(),
+): number {
+  return rewriteSystemHistory(history, isZsh, (c) => c === cmd, true);
+}
+
+export function removeManyFromSystemHistory(
+  cmds: ReadonlySet<string>,
+  history: HistoryItems,
+  isZsh = isZshParentShell(),
+): number {
+  return rewriteSystemHistory(history, isZsh, (c) => cmds.has(c), false);
 }
 
 export function removeLastHistoryEntry(
