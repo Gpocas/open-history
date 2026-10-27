@@ -1,7 +1,10 @@
 #!/usr/bin/env bun
 import { createCliRenderer } from "@opentui/core";
-import { render } from "@opentui/solid";
 import { ensureSolidTransformPlugin } from "@opentui/solid/bun-plugin";
+
+// Must be called BEFORE importing solid-js or @opentui/solid so solid-js/dist/server.js is redirected to solid.js
+ensureSolidTransformPlugin();
+
 import type { HstrSelectionOutcome } from "./src/app.tsx";
 import { Blacklist } from "./src/blacklist.ts";
 import {
@@ -30,6 +33,9 @@ import {
 
 // Ensure Solid JSX transform is active even when invoked outside the project directory
 ensureSolidTransformPlugin();
+
+export { mountHstrApp } from "./src/app.tsx";
+export { render } from "@opentui/solid";
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   const isTiocsti = isTiocstiSupported();
@@ -120,6 +126,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     return 0;
   }
 
+  const { render } = await import("@opentui/solid");
   const { mountHstrApp } = await import("./src/app.tsx");
 
   let finalOutcome: HstrSelectionOutcome = {

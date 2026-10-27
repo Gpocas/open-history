@@ -6,7 +6,7 @@ const result = await Bun.build({
   outdir: "./dist",
   target: "bun",
   plugins: [solidPlugin],
-  packages: "external",
+  external: ["@opentui/core", "@opentui/core/*"],
 });
 
 if (!result.success) {
