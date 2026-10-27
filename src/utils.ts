@@ -384,27 +384,14 @@ export function getBashInstallCode(isTiocsti = false, cmd = "hstr"): string {
   );
 }
 
-export function getZshInstallCode(isTiocsti = false, cmd = "hstr"): string {
+export function getZshInstallCode(isTiocsti = false, cmd = "open-history"): string {
   const prefix = [
     "",
-    "# HSTR configuration - add this to ~/.zshrc",
-    `alias hh=${cmd}                    # hh to be alias for hstr`,
+    "# open-history (HSTR) configuration - add this to ~/.zshrc",
+    `alias hh=${cmd}                    # hh to be alias for ${cmd}`,
     "setopt histignorespace           # skip cmds w/ leading space from history",
     "export HSTR_CONFIG=hicolor       # get more colors",
   ].join("\n");
-
-  if (isTiocsti) {
-    return (
-      prefix +
-      [
-        "",
-        `bindkey -s "\\C-r" "\\C-a ${cmd} -- \\C-j"     # bind hstr to Ctrl-r (for Vi mode check doc)`,
-        "export HSTR_TIOCSTI=y",
-        "",
-        "",
-      ].join("\n")
-    );
-  }
 
   return (
     prefix +
@@ -413,13 +400,15 @@ export function getZshInstallCode(isTiocsti = false, cmd = "hstr"): string {
       "hstr_no_tiocsti() {",
       "    zle -I",
       `    { HSTR_OUT="$( { </dev/tty ${cmd} -- \${BUFFER}; } 2>&1 1>&3 3>&- )"; } 3>&1;`,
-      '    BUFFER="${HSTR_OUT}"',
-      "    CURSOR=${#BUFFER}",
+      '    if [ -n "${HSTR_OUT}" ]; then',
+      '        BUFFER="${HSTR_OUT}"',
+      "        CURSOR=${#BUFFER}",
+      "    fi",
       "    zle redisplay",
       "}",
       "zle -N hstr_no_tiocsti",
       "bindkey '\\C-r' hstr_no_tiocsti",
-      "export HSTR_TIOCSTI=n",
+      `export HSTR_TIOCSTI=${isTiocsti ? "y" : "n"}`,
       "",
       "",
     ].join("\n")
