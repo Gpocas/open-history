@@ -1,6 +1,10 @@
 {
   "name": "open-history",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gpocas/open-history.git"
+  },
   "module": "index.ts",
   "type": "module",
   "bin": {

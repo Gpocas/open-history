@@ -46,31 +46,13 @@ Recriação moderna do [HSTR](https://github.com/dvorka/hstr) (Bash & Zsh Shell 
 
 Com **Bun**:
 ```bash
-bun install -g github:SEU_USUARIO/open-history
-# ou via SSH:
-bun install -g git+ssh://git@github.com/SEU_USUARIO/open-history.git
+bun install -g github:gpocas/open-history
 ```
 
 Com **npm**:
 ```bash
-npm install -g github:SEU_USUARIO/open-history
-# ou via SSH:
-npm install -g git+ssh://git@github.com:SEU_USUARIO/open-history.git
+npm install -g github:gpocas/open-history
 ```
-
-### A partir do repositório local
-
-```bash
-bun install
-bun run build
-
-# Instalar globalmente na máquina a partir da pasta local:
-bun install -g .
-# ou:
-npm install -g .
-```
-
-Os binários **`open-history`** e **`hstr`** ficarão disponíveis globalmente no terminal.
 
 ---
 
