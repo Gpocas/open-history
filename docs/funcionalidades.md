@@ -4,7 +4,7 @@
 
 - Tema semântico (`dark`, `light` e `monochromatic`) com suporte completo a teclado e mouse.
 - **Search Input Box** em destaque com `<input>` nativo do OpenTUI, contador `X/Y matches` em tempo real e botão rápido `[× C-u]`.
-- **Selects e Checkboxes Interativos** na barra superior para alternar **View** (`Ranking`, `Recents`, `Favorites`), **Match** (`keywords`, `exact`, `regexp`) e opções (`[✓]Regex`, `[✓]Case`, `[✓]Dedup`).
+- **Selects e Checkboxes Interativos** na barra superior para alternar **View** (`ranking`, `recents`, `favorites`), **Match** (`keywords`, `exact`, `regexp`) e opções (`[x] case`, `[x] dedup`).
 
 ## Destaque Visual em Azul & Janela Inteligente para Comandos Grandes
 
@@ -39,11 +39,10 @@ Ao pressionar `Tab` (ou `→` na lista), abre um Dialog com 2 formas de edição
 | **`←` / `→`, `Home` / `End`, `Backspace`** | Move o cursor e edita o texto dentro do input de busca |
 | **`↑` / `↓`, `Ctrl-p` / `Ctrl-n`, `Ctrl-k` / `Ctrl-j`, `Ctrl-r`** | Navega pelos comandos (com scroll automático além da janela visível) |
 | **`PgUp` / `PgDn` ou Scroll do Mouse** | Salta 10 itens / rola a lista de comandos |
-| **`Ctrl-/`** (ou `Ctrl-w` no macOS) / **`Alt+1..3`** / **Clique** | Alterna a View: `Ranking` → `Recents` → `Favorites` |
+| **`Ctrl-/`** (ou `Ctrl-w` no macOS) / **`Alt+1..3`** / **Clique** | Alterna a View: `‹ranking›` → `‹recents›` → `‹favorites›` |
 | **`Ctrl-e`** / **Clique** | Alterna o modo de Match: `‹keywords›` → `‹exact›` → `‹regexp›` |
-| **Checkbox `[✓]Regex`** (`Ctrl-e` / Clique) | Habilita/desabilita busca por expressão regular |
-| **Checkbox `[✓]Case(C-t)`** (`Ctrl-t` / Clique) | Habilita/desabilita busca `case-sensitive` |
-| **Checkbox `[✓]Dedup(C-d)`** (`Ctrl-d` / Clique) | Habilita/desabilita remoção de duplicatas |
+| **Checkbox `[x] case`** (`Ctrl-t` / Clique) | Habilita/desabilita busca `case-sensitive` |
+| **Checkbox `[x] dedup`** (`Ctrl-d` / Clique) | Habilita/desabilita remoção de duplicatas |
 | **`Enter`** ou **Clique no item** | Abre o Dialog **`Run Command`** (`v` Split Vertical, `h` Split Horizontal, `c` Copy, `s` Insert & Run in Shell) |
 | **`Alt+v` / `Alt+h`** | Executa diretamente em Split Vertical (`Alt+v`) ou Split Horizontal (`Alt+h`) |
 | **`Tab`** (ou **`→`** com item selecionado) | Abre o Dialog **`Edit Command`** (`i` Edit in Shell Prompt, `e` Edit in Default Editor `$EDITOR`) |

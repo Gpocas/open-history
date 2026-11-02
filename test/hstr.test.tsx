@@ -388,7 +388,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     let frame = setup.captureCharFrame();
     expect(frame).toContain("Type to filter, UP/DOWN move");
     expect(frame).toContain(`▪ v${pkg.version}`);
-    expect(frame).toContain("view:ranking");
+    expect(frame).toContain("‹ranking›");
     expect(frame).toContain("git status");
     expect(frame).toContain("bun run index.ts");
 
@@ -472,16 +472,16 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     );
 
     await setup.renderOnce();
-    expect(setup.captureCharFrame()).toContain("view:ranking");
-    expect(setup.captureCharFrame()).toContain("[● Ranking]");
-    expect(setup.captureCharFrame()).toContain("[○ Recents]");
-    expect(setup.captureCharFrame()).toContain("[○ Favorites]");
+    expect(setup.captureCharFrame()).toContain("view:▾");
+    expect(setup.captureCharFrame()).toContain("‹ranking›");
+    expect(setup.captureCharFrame()).toContain(" recents ");
+    expect(setup.captureCharFrame()).toContain(" favorites ");
     expect(setup.captureCharFrame()).toContain("‹keywords›");
-    expect(setup.captureCharFrame()).toContain("[ ]Regex");
-    expect(setup.captureCharFrame()).toContain("[ ]Case(C-t)");
-    expect(setup.captureCharFrame()).toContain("[✓]Dedup(C-d)");
+    expect(setup.captureCharFrame()).not.toContain("Regex");
+    expect(setup.captureCharFrame()).toContain("[ ] case (C-t)");
+    expect(setup.captureCharFrame()).toContain("[x] dedup (C-d)");
 
-    // Ctrl-e -> match:exact, then Ctrl-e -> match:regexp ([✓]Regex)
+    // Ctrl-e -> match:exact, then Ctrl-e -> match:regexp
     setup.mockInput.pressKey("e", { ctrl: true });
     await setup.renderOnce();
     expect(setup.captureCharFrame()).toContain("‹exact›");
@@ -489,28 +489,25 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     setup.mockInput.pressKey("e", { ctrl: true });
     await setup.renderOnce();
     expect(setup.captureCharFrame()).toContain("‹regexp›");
-    expect(setup.captureCharFrame()).toContain("[✓]Regex");
 
-    // Ctrl-t -> [✓]Case(C-t)
+    // Ctrl-t -> [x] case
     setup.mockInput.pressKey("t", { ctrl: true });
     await setup.renderOnce();
-    expect(setup.captureCharFrame()).toContain("[✓]Case(C-t)");
+    expect(setup.captureCharFrame()).toContain("[x] case (C-t)");
 
     // Ctrl-d -> toggle Deduplicate checkbox off
     setup.mockInput.pressKey("d", { ctrl: true });
     await setup.renderOnce();
-    expect(setup.captureCharFrame()).toContain("[ ]Dedup(C-d)");
+    expect(setup.captureCharFrame()).toContain("[ ] dedup (C-d)");
 
-    // Ctrl-/ (\x1f) -> view:history ([● Recents]), then view:favorites ([● Favorites])
+    // Ctrl-/ (\x1f) -> ‹recents›, then ‹favorites›
     setup.mockInput.pressKey("\x1f");
     await setup.renderOnce();
-    expect(setup.captureCharFrame()).toContain("view:history");
-    expect(setup.captureCharFrame()).toContain("[● Recents]");
+        expect(setup.captureCharFrame()).toContain("‹recents›");
 
     setup.mockInput.pressKey("\x1f");
     await setup.renderOnce();
-    expect(setup.captureCharFrame()).toContain("view:favorites");
-    expect(setup.captureCharFrame()).toContain("[● Favorites]");
+        expect(setup.captureCharFrame()).toContain("‹favorites›");
     expect(setup.captureCharFrame()).toContain("fav command");
 
     setup.renderer.destroy();
@@ -743,7 +740,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     const favorites = new FavoriteItems();
     let selectedOutcome: HstrSelectionOutcome | null = null;
 
-    // Height 12 leaves 5 visible list rows
+    // Height 13 leaves 5 visible list rows
     const setup = await testRender(
       () => (
         <HstrApp
@@ -756,7 +753,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
           }}
         />
       ),
-      { width: 80, height: 12 },
+      { width: 80, height: 13 },
     );
 
     await setup.renderOnce();

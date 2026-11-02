@@ -12,7 +12,6 @@ import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount }
 import {
   HSTR_CASE_LABELS,
   HSTR_MATCH_LABELS,
-  HSTR_VIEW_LABELS,
   HstrCase,
   HstrMatch,
   HstrView,
@@ -425,7 +424,7 @@ export function HstrApp(props: HstrAppProps) {
 
   const headerRowsCount = createMemo(() => {
     if (props.config.hideHistoryHelp) return 0;
-    return showControlsBar() ? 2 : 1;
+    return showControlsBar() ? 3 : 2;
   });
 
   const inputRowsCount = createMemo(() => (showBoxedInput() ? 3 : 1));
@@ -859,14 +858,6 @@ export function HstrApp(props: HstrAppProps) {
 
   const selectMatchMode = (nextMatch: HstrMatch) => {
     setMatching(nextMatch);
-    resetSelection();
-    focusInput();
-  };
-
-  const toggleRegexCheckbox = () => {
-    setMatching((current) =>
-      current === HstrMatch.REGEXP ? HstrMatch.KEYWORDS : HstrMatch.REGEXP,
-    );
     resetSelection();
     focusInput();
   };
@@ -1348,7 +1339,7 @@ export function HstrApp(props: HstrAppProps) {
 
   const viewShortcutLabel = () => (process.platform === "darwin" ? "C-w" : "C-/");
 
-  // Row 1: Top Header with interactive View Mode Select (`ranking` | `recents (history)` | `favorites`)
+  // Row 1: Top Header with version, counters and close button
   const renderHeaderRow = () => (
     <box
       height={1}
@@ -1360,59 +1351,9 @@ export function HstrApp(props: HstrAppProps) {
       justifyContent="space-between"
       backgroundColor={theme().background.raised.high}
     >
-      <box flexDirection="row" gap={1} flexShrink={1}>
-        <text fg={accent()} attributes={TextAttributes.BOLD} wrapMode="none" flexShrink={0}>
-          {theme().mono ? `- v${pkg.version} -` : `▪ v${pkg.version}`}
-        </text>
-        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
-          {`view:${HSTR_VIEW_LABELS[view()]} ▾`}
-        </text>
-        <box
-          flexDirection="row"
-          gap={1}
-          flexShrink={0}
-          onMouseUp={() => selectViewMode(HstrView.RANKING)}
-        >
-          <text
-            fg={view() === HstrView.RANKING ? theme().categorical.ranking : theme().text.muted}
-            attributes={view() === HstrView.RANKING ? TextAttributes.BOLD : 0}
-            wrapMode="none"
-          >
-            {view() === HstrView.RANKING ? "[● Ranking]" : "[○ Ranking]"}
-          </text>
-        </box>
-        <box
-          flexDirection="row"
-          gap={1}
-          flexShrink={0}
-          onMouseUp={() => selectViewMode(HstrView.HISTORY)}
-        >
-          <text
-            fg={view() === HstrView.HISTORY ? theme().categorical.history : theme().text.muted}
-            attributes={view() === HstrView.HISTORY ? TextAttributes.BOLD : 0}
-            wrapMode="none"
-          >
-            {view() === HstrView.HISTORY ? "[● Recents]" : "[○ Recents]"}
-          </text>
-        </box>
-        <box
-          flexDirection="row"
-          gap={1}
-          flexShrink={0}
-          onMouseUp={() => selectViewMode(HstrView.FAVORITES)}
-        >
-          <text
-            fg={view() === HstrView.FAVORITES ? theme().categorical.favorites : theme().text.muted}
-            attributes={view() === HstrView.FAVORITES ? TextAttributes.BOLD : 0}
-            wrapMode="none"
-          >
-            {view() === HstrView.FAVORITES ? "[● Favorites]" : "[○ Favorites]"}
-          </text>
-        </box>
-        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
-          {`(${viewShortcutLabel()})`}
-        </text>
-      </box>
+      <text fg={accent()} attributes={TextAttributes.BOLD} wrapMode="none" flexShrink={0}>
+        {theme().mono ? `- v${pkg.version} -` : `▪ v${pkg.version}`}
+      </text>
       <box flexDirection="row" gap={1} flexShrink={0}>
         <text fg={theme().text.muted} wrapMode="none" flexShrink={0}>
           {`${props.history.count}/${props.history.rawCount}/${props.favorites.count}`}
@@ -1437,7 +1378,48 @@ export function HstrApp(props: HstrAppProps) {
     </box>
   );
 
-  // Row 2: Interactive Match Select + Checkboxes (`[✓]Regex`, `[✓]Case`, `[✓]Dedup`)
+  const viewOptions = [
+    { view: HstrView.RANKING, label: "ranking", color: () => theme().categorical.ranking },
+    { view: HstrView.HISTORY, label: "recents", color: () => theme().categorical.history },
+    { view: HstrView.FAVORITES, label: "favorites", color: () => theme().categorical.favorites },
+  ];
+
+  // Row 2: Interactive View Mode Select (`‹ranking›` | `recents` | `favorites`)
+  const renderViewRow = () => (
+    <box
+      height={1}
+      width="100%"
+      flexShrink={0}
+      paddingLeft={1}
+      paddingRight={1}
+      flexDirection="row"
+      backgroundColor={theme().background.raised.base}
+    >
+      <box flexDirection="row" gap={1} flexShrink={0}>
+        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
+          {"view:▾"}
+        </text>
+        <For each={viewOptions}>
+          {(opt) => (
+            <box flexShrink={0} onMouseUp={() => selectViewMode(opt.view)}>
+              <text
+                fg={view() === opt.view ? opt.color() : theme().text.muted}
+                attributes={view() === opt.view ? TextAttributes.BOLD : 0}
+                wrapMode="none"
+              >
+                {view() === opt.view ? `‹${opt.label}›` : ` ${opt.label} `}
+              </text>
+            </box>
+          )}
+        </For>
+        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
+          {`(${viewShortcutLabel()})`}
+        </text>
+      </box>
+    </box>
+  );
+
+  // Row 3: Interactive Match Select + Checkboxes (`[x] case`, `[x] dedup`)
   const renderControlsToolbarRow = () => (
     <box
       height={1}
@@ -1498,41 +1480,39 @@ export function HstrApp(props: HstrAppProps) {
       </box>
 
       <box flexDirection="row" gap={1} flexShrink={0}>
-        <box flexShrink={0} onMouseUp={toggleRegexCheckbox}>
-          <text
-            fg={
-              matching() === HstrMatch.REGEXP
-                ? theme().text.feedback.info
-                : theme().text.muted
-            }
-            attributes={matching() === HstrMatch.REGEXP ? TextAttributes.BOLD : 0}
-            wrapMode="none"
-          >
-            {matching() === HstrMatch.REGEXP ? "[✓]Regex" : "[ ]Regex"}
-          </text>
-        </box>
-        <box flexShrink={0} onMouseUp={toggleCaseCheckbox}>
-          <text
-            fg={
-              caseSensitive() === HstrCase.SENSITIVE
-                ? theme().text.feedback.warning
-                : theme().text.muted
-            }
-            attributes={caseSensitive() === HstrCase.SENSITIVE ? TextAttributes.BOLD : 0}
-            wrapMode="none"
-          >
-            {caseSensitive() === HstrCase.SENSITIVE ? "[✓]Case(C-t)" : "[ ]Case(C-t)"}
-          </text>
-        </box>
-        <box flexShrink={0} onMouseUp={toggleDeduplicateCheckbox}>
-          <text
-            fg={deduplicate() ? theme().text.feedback.success : theme().text.muted}
-            attributes={deduplicate() ? TextAttributes.BOLD : 0}
-            wrapMode="none"
-          >
-            {deduplicate() ? "[✓]Dedup(C-d)" : "[ ]Dedup(C-d)"}
-          </text>
-        </box>
+        <For
+          each={[
+            {
+              label: "case",
+              shortcut: "C-t",
+              checked: () => caseSensitive() === HstrCase.SENSITIVE,
+              color: () => theme().text.feedback.warning,
+              toggle: toggleCaseCheckbox,
+            },
+            {
+              label: "dedup",
+              shortcut: "C-d",
+              checked: () => deduplicate(),
+              color: () => theme().text.feedback.success,
+              toggle: toggleDeduplicateCheckbox,
+            },
+          ]}
+        >
+          {(opt) => (
+            <box flexDirection="row" gap={1} flexShrink={0} onMouseUp={opt.toggle}>
+              <text
+                fg={opt.checked() ? opt.color() : theme().text.muted}
+                attributes={opt.checked() ? TextAttributes.BOLD : 0}
+                wrapMode="none"
+              >
+                {`${opt.checked() ? "[x]" : "[ ]"} ${opt.label}`}
+              </text>
+              <text fg={theme().text.faint} wrapMode="none">
+                {`(${opt.shortcut})`}
+              </text>
+            </box>
+          )}
+        </For>
       </box>
     </box>
   );
@@ -1544,6 +1524,7 @@ export function HstrApp(props: HstrAppProps) {
     >
       <box flexDirection="column" width="100%" flexShrink={0}>
         {renderHeaderRow()}
+        {renderViewRow()}
         <Show when={showControlsBar()}>{renderControlsToolbarRow()}</Show>
       </box>
     </Show>
