@@ -2597,9 +2597,10 @@ export function HstrApp(props: HstrAppProps) {
 
   const toastWidth = createMemo(() => Math.max(24, Math.min(56, historyPaneWidth() - 4)));
 
-  // Toasts float over the history list, next to the edge farthest from the search input
+  // Toasts sit flush against the right edge of the history pane and the bar next to the list,
+  // on the side farthest from the search input
   const toastAnchor = createMemo((): { top?: number; bottom?: number; right: number } => {
-    const right = dimensions().width - historyPaneWidth() + 1;
+    const right = dimensions().width - historyPaneWidth();
     if (props.config.promptBottom) {
       return { top: props.config.helpOnOppositeSide ? headerRowsCount() : 0, right };
     }
@@ -2628,17 +2629,24 @@ export function HstrApp(props: HstrAppProps) {
           {(toast) => {
             const color = () =>
               toast.kind === "error" ? theme().status.error : theme().status.success;
-            const textWidth = () => toastWidth() - 3;
+            const textWidth = () => toastWidth() - 5;
             return (
               <box
                 width="100%"
                 flexDirection="row"
                 flexShrink={0}
-                backgroundColor={theme().mono ? RGBA.fromInts(0, 0, 0, 255) : theme().status.bg}
+                backgroundColor={theme().status.raised}
                 onMouseUp={() => dismissToast(toast.id)}
               >
                 <box width={1} flexShrink={0} backgroundColor={color()} />
-                <box flexDirection="column" flexGrow={1} paddingLeft={1} paddingRight={1}>
+                <box
+                  flexDirection="column"
+                  flexGrow={1}
+                  paddingTop={1}
+                  paddingBottom={1}
+                  paddingLeft={2}
+                  paddingRight={2}
+                >
                   <text fg={color()} attributes={TextAttributes.BOLD} wrapMode="none">
                     {truncateText(toast.title, textWidth())}
                   </text>

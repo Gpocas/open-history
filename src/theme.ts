@@ -91,6 +91,8 @@ export interface OpenCodeThemeTokens {
   // apart from the history list. Dark: DDG's neutral divider grey #2d2d2d.
   status: {
     bg: RGBA;
+    // Floating surfaces over the bars (toasts), one step lighter so they don't merge with them
+    raised: RGBA;
     text: RGBA;
     muted: RGBA;
     faint: RGBA;
@@ -200,6 +202,7 @@ const DARK_TOKENS: OpenCodeThemeTokens = {
   },
   status: {
     bg: RGBA.fromHex(DDG.divider),
+    raised: RGBA.fromHex("#383838"),
     text: RGBA.fromHex(DDG.text),
     muted: RGBA.fromHex("#b0b0b0"),
     faint: RGBA.fromHex("#8c8c8c"),
@@ -284,6 +287,7 @@ const LIGHT_TOKENS: OpenCodeThemeTokens = {
   },
   status: {
     bg: RGBA.fromHex("#e6e6e6"),
+    raised: RGBA.fromHex("#d4d4d4"),
     text: RGBA.fromHex("#1a1a1a"),
     muted: RGBA.fromHex("#555555"),
     faint: RGBA.fromHex("#767676"),
@@ -372,6 +376,7 @@ const MONO_TOKENS: OpenCodeThemeTokens = {
   },
   status: {
     bg: MONO_BG,
+    raised: RGBA.fromInts(0, 0, 0, 255),
     text: MONO_FG,
     muted: MONO_MUTED,
     faint: MONO_MUTED,

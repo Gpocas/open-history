@@ -604,9 +604,11 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
       const lines = frame.trimEnd().split("\n");
       const footer = lines[lines.length - 1] ?? "";
       const toastLine = lines.findIndex((l) => l.includes("Added to favorites"));
-      // Toast sits right above the footer, over the list, and the footer is untouched
-      expect(toastLine).toBe(lines.length - 3);
-      expect(lines[lines.length - 2]).toContain("git status");
+      // Toast is flush against the footer (title, message, bottom padding), footer untouched
+      expect(toastLine).toBe(lines.length - 4);
+      expect(lines[lines.length - 3]).toContain("git status");
+      expect(lines[lines.length - 2]?.trim()).toBe("");
+      expect(lines[toastLine - 1]?.trim()).toBe("");
       expect(footer).toContain("help f1");
 
       // Unlike the old banner, a keypress does not dismiss the toast
