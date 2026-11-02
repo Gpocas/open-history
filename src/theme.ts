@@ -88,7 +88,7 @@ export interface OpenCodeThemeTokens {
     bg: RGBA;
   };
   // Status bars (view row, match row and footer) have their own palette so they stand
-  // apart from the history list
+  // apart from the history list. Dark: DDG's neutral divider grey #2d2d2d.
   status: {
     bg: RGBA;
     text: RGBA;
@@ -199,16 +199,16 @@ const DARK_TOKENS: OpenCodeThemeTokens = {
     bg: RGBA.fromHex("#1f2738"),
   },
   status: {
-    bg: RGBA.fromHex("#24222c"),
+    bg: RGBA.fromHex(DDG.divider),
     text: RGBA.fromHex(DDG.text),
-    muted: RGBA.fromHex("#b4b1bd"),
-    faint: RGBA.fromHex("#85828f"),
+    muted: RGBA.fromHex("#b0b0b0"),
+    faint: RGBA.fromHex("#8c8c8c"),
     selected: RGBA.fromHex(DDG.link),
     warning: RGBA.fromHex(DDG.yellow),
     success: RGBA.fromHex(DDG.green),
     error: RGBA.fromHex(DDG.red),
     view: {
-      ranking: RGBA.fromHex("#f06a43"),
+      ranking: RGBA.fromHex("#f3714b"),
       history: RGBA.fromHex(DDG.link),
       favorites: RGBA.fromHex(DDG.visited),
     },
@@ -283,10 +283,10 @@ const LIGHT_TOKENS: OpenCodeThemeTokens = {
     bg: RGBA.fromHex("#d4e5fd"),
   },
   status: {
-    bg: RGBA.fromHex("#e6e4ec"),
+    bg: RGBA.fromHex("#e6e6e6"),
     text: RGBA.fromHex("#1a1a1a"),
-    muted: RGBA.fromHex("#55525e"),
-    faint: RGBA.fromHex("#77737f"),
+    muted: RGBA.fromHex("#555555"),
+    faint: RGBA.fromHex("#767676"),
     selected: RGBA.fromHex("#2f6bc0"),
     warning: RGBA.fromHex("#9a5a0a"),
     success: RGBA.fromHex("#2e7d46"),
