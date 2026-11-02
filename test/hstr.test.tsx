@@ -567,6 +567,64 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     setup.renderer.destroy();
   });
 
+  test("toasts float over the list, keep the footer intact and dismiss themselves", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "open-history-tui-"));
+    try {
+      const history = {
+        items: ["git status", "docker ps"],
+        count: 2,
+        rawItems: ["git status", "docker ps"],
+        rawCount: 2,
+        filePath: "",
+        dirty: false,
+      };
+      const favorites = new FavoriteItems({ customFilePath: join(dir, ".hstr_favorites") });
+      favorites.load();
+
+      const setup = await testRender(
+        () => (
+          <HstrApp
+            config={createDefaultConfig()}
+            history={history}
+            favorites={favorites}
+            isZsh={false}
+            onExit={() => {}}
+          />
+        ),
+        { width: 80, height: 16 },
+      );
+      await setup.renderOnce();
+
+      setup.mockInput.pressArrow("down");
+      await setup.renderOnce();
+      setup.mockInput.pressKey("f", { ctrl: true });
+      await setup.renderOnce();
+
+      let frame = setup.captureCharFrame();
+      const lines = frame.trimEnd().split("\n");
+      const footer = lines[lines.length - 1] ?? "";
+      const toastLine = lines.findIndex((l) => l.includes("Added to favorites"));
+      // Toast sits right above the footer, over the list, and the footer is untouched
+      expect(toastLine).toBe(lines.length - 3);
+      expect(lines[lines.length - 2]).toContain("git status");
+      expect(footer).toContain("help f1");
+
+      // Unlike the old banner, a keypress does not dismiss the toast
+      setup.mockInput.pressArrow("down");
+      await setup.renderOnce();
+      expect(setup.captureCharFrame()).toContain("Added to favorites");
+
+      await Bun.sleep(2600);
+      await setup.renderOnce();
+      frame = setup.captureCharFrame();
+      expect(frame).not.toContain("Added to favorites");
+
+      setup.renderer.destroy();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("supports navigation, adding favorites (Ctrl-f), and deleting with confirmation (DEL + y)", async () => {
     const dir = mkdtempSync(join(tmpdir(), "open-history-tui-"));
     try {
@@ -605,7 +663,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
       // Add selected item to favorites with Ctrl-f
       setup.mockInput.pressKey("f", { ctrl: true });
       await setup.renderOnce();
-      expect(setup.captureCharFrame()).toContain("added to favorites");
+      expect(setup.captureCharFrame()).toContain("Added to favorites");
       expect(favorites.count).toBe(1);
 
       // Move down again and press Delete
@@ -947,7 +1005,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     await setup.mockInput.typeText("c");
     await setup.renderOnce();
     frame = setup.captureCharFrame();
-    expect(frame).toContain("copied to clipboard ✓");
+    expect(frame).toContain("Copied to clipboard");
     expect(exited).toBe(false);
 
     // Re-open dialog with Enter and press 'h' -> runs in Horizontal Split without exiting the TUI

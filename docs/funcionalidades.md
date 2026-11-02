@@ -6,6 +6,7 @@
 - **Search Input Box** em destaque com `<input>` nativo do OpenTUI, contador `X/Y matches` em tempo real e botão rápido `[× C-u]`.
 - **Selects e Checkboxes Interativos** na barra superior para alternar **View** (`ranking`, `recents`, `favorites`), **Match** (`keywords`, `exact`, `regexp`) e opções (`[x] case`, `[x] dedup`).
 - **Rodapé** com a versão, o atalho do **Help** (`F1`) e os atalhos principais. O Dialog **`Keyboard shortcuts`** lista todos os atalhos (rolagem com `↑`/`↓`, `PgUp`/`PgDn` ou mouse; fecha com `Esc`, `F1` ou `q`).
+- **Toasts** no canto inferior direito confirmam ações (comando copiado, favorito adicionado, itens removidos). Eles somem sozinhos após ~2,5 s, empilham até 3 e podem ser fechados com um clique. O erro de regex inválido fica fixo no rodapé enquanto o padrão estiver inválido.
 
 ## Destaque Visual em Azul & Janela Inteligente para Comandos Grandes
 

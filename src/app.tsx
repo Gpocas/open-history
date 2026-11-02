@@ -294,12 +294,17 @@ export interface HstrAppProps {
   onExit: (outcome: HstrSelectionOutcome) => void;
 }
 
-type NotificationState =
-  | { type: "none" }
-  | { type: "deleted"; text: string }
-  | { type: "favorite-added"; text: string }
-  | { type: "copied"; text: string }
-  | { type: "regexp-error"; text: string };
+type ToastKind = "success" | "error";
+
+interface ToastItem {
+  id: number;
+  kind: ToastKind;
+  title: string;
+  message: string;
+}
+
+const TOAST_DURATION_MS = 2500;
+const TOAST_MAX_STACK = 3;
 
 export function mountHstrApp(props: HstrAppProps) {
   return () => <HstrApp {...props} />;
@@ -324,7 +329,30 @@ export function HstrApp(props: HstrAppProps) {
   const [selectionCursor, setSelectionCursor] = createSignal<number>(SELECTION_CURSOR_IN_PROMPT);
   const [scrollOffset, setScrollOffset] = createSignal<number>(0);
   const [lowercaseToggle, setLowercaseToggle] = createSignal(true);
-  const [notification, setNotification] = createSignal<NotificationState>({ type: "none" });
+  const [toasts, setToasts] = createSignal<ToastItem[]>([]);
+  const toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  let toastSeq = 0;
+
+  const dismissToast = (id: number) => {
+    clearTimeout(toastTimers.get(id));
+    toastTimers.delete(id);
+    setToasts((list) => list.filter((t) => t.id !== id));
+  };
+
+  // Sonner-like transient feedback: stacks up to TOAST_MAX_STACK and dismisses itself
+  const showToast = (kind: ToastKind, title: string, message = "") => {
+    const id = ++toastSeq;
+    setToasts((list) => [...list, { id, kind, title, message }].slice(-TOAST_MAX_STACK));
+    toastTimers.set(
+      id,
+      setTimeout(() => dismissToast(id), TOAST_DURATION_MS),
+    );
+  };
+
+  onCleanup(() => {
+    for (const timer of toastTimers.values()) clearTimeout(timer);
+    toastTimers.clear();
+  });
   const [modelVersion, setModelVersion] = createSignal(0);
 
   // Dialog & tmux-like Split Execution states
@@ -552,17 +580,15 @@ export function HstrApp(props: HstrAppProps) {
   const performDelete = (cmd: string) => {
     const deletedOccurrences = removeFromHistoryModel(cmd);
     if (view() === HstrView.FAVORITES) {
-      setNotification({
-        type: "deleted",
-        text: `Favorites item '${cmd}' deleted`,
-      });
+      showToast("error", "Removed from favorites", cmd);
     } else {
-      setNotification({
-        type: "deleted",
-        text: `History item '${cmd}' deleted (${deletedOccurrences} occurrence${
+      showToast(
+        "error",
+        `History item deleted (${deletedOccurrences} occurrence${
           deletedOccurrences === 1 ? "" : "s"
         })`,
-      });
+        cmd,
+      );
     }
     afterDelete();
   };
@@ -578,10 +604,7 @@ export function HstrApp(props: HstrAppProps) {
       removeFromRanked(cmd, props.history);
     }
     setModelVersion((v) => v + 1);
-    setNotification({
-      type: "deleted",
-      text: `History line '${cmd}' deleted (1 occurrence)`,
-    });
+    showToast("error", "History line deleted (1 occurrence)", cmd);
     afterDelete();
   };
 
@@ -600,10 +623,10 @@ export function HstrApp(props: HstrAppProps) {
       }
     }
     setModelVersion((v) => v + 1);
-    setNotification({
-      type: "deleted",
-      text: `${commands.length} filtered item${commands.length === 1 ? "" : "s"} deleted`,
-    });
+    showToast(
+      "error",
+      `${commands.length} filtered item${commands.length === 1 ? "" : "s"} deleted`,
+    );
     afterDelete();
   };
 
@@ -792,10 +815,7 @@ export function HstrApp(props: HstrAppProps) {
       })
       .catch(() => {});
     setRunDialogCommand(null);
-    setNotification({
-      type: "copied",
-      text: `Command '${cmd}' copied to clipboard ✓`,
-    });
+    showToast("success", "Copied to clipboard", cmd);
     queueMicrotask(focusInput);
   };
 
@@ -1101,12 +1121,6 @@ export function HstrApp(props: HstrAppProps) {
       return;
     }
 
-    const currentNotification = notification();
-
-    if (currentNotification.type !== "none") {
-      setNotification({ type: "none" });
-    }
-
     const isCtrlR = key.ctrl && key.name === "r";
     const isMoveUp =
       key.name === "up" ||
@@ -1219,10 +1233,7 @@ export function HstrApp(props: HstrAppProps) {
           } else {
             props.favorites.add(cmd);
             setModelVersion((v) => v + 1);
-            setNotification({
-              type: "favorite-added",
-              text: `Command '${cmd}' added to favorites (C-/ to show favorites)`,
-            });
+            showToast("success", `Added to favorites (${viewShortcutLabel()} to show)`, cmd);
           }
           resetSelection();
         }
@@ -1430,15 +1441,8 @@ export function HstrApp(props: HstrAppProps) {
     }
   });
 
-  const activeNotification = createMemo((): NotificationState => {
-    const n = notification();
-    if (n.type !== "none") return n;
-    const regErr = selectionResult().regexpError;
-    if (regErr) {
-      return { type: "regexp-error", text: regErr };
-    }
-    return { type: "none" };
-  });
+  // Invalid regexp stays visible (in the footer) for as long as the pattern is broken
+  const regexpErrorText = createMemo(() => selectionResult().regexpError ?? null);
 
   const viewShortcutLabel = () => (process.platform === "darwin" ? "C-w" : "C-/");
 
@@ -1750,18 +1754,12 @@ export function HstrApp(props: HstrAppProps) {
     </Show>
   );
 
-  // Transient notification (favorite added, copied, deleted, regexp error) shown in the footer
+  // Persistent banner shown in the footer: currently only the invalid regexp error
   const notificationBanner = createMemo(() => {
-    const notif = activeNotification();
+    const text = regexpErrorText();
+    if (text === null) return null;
     const t = theme();
-
-    if (notif.type === "deleted" || notif.type === "regexp-error") {
-      return { fg: t.text.feedback.error, bg: t.background.feedback.error, text: notif.text };
-    }
-    if (notif.type === "favorite-added" || notif.type === "copied") {
-      return { fg: t.text.feedback.success, bg: t.background.feedback.success, text: notif.text };
-    }
-    return null;
+    return { fg: t.text.feedback.error, bg: t.background.feedback.error, text };
   });
 
   const renderNotificationRow = () => (
@@ -1793,7 +1791,7 @@ export function HstrApp(props: HstrAppProps) {
   );
 
   // OpenCode-styled bottom footer band: version + help on the left, primary shortcuts on the right.
-  // While a notification is active it takes over the whole band.
+  // While the regexp is invalid the error takes over the whole band.
   const renderFooterBand = () => (
     <Show when={notificationBanner() === null} fallback={renderNotificationRow()}>
       <box
@@ -2597,6 +2595,67 @@ export function HstrApp(props: HstrAppProps) {
     </Show>
   );
 
+  const toastWidth = createMemo(() => Math.max(24, Math.min(56, historyPaneWidth() - 4)));
+
+  // Toasts float over the history list, next to the edge farthest from the search input
+  const toastAnchor = createMemo((): { top?: number; bottom?: number; right: number } => {
+    const right = dimensions().width - historyPaneWidth() + 1;
+    if (props.config.promptBottom) {
+      return { top: props.config.helpOnOppositeSide ? headerRowsCount() : 0, right };
+    }
+    const belowPane = dimensions().height - historyPaneHeight();
+    const belowList =
+      footerRowsCount() + (props.config.helpOnOppositeSide ? headerRowsCount() : 0);
+    return { bottom: belowPane + belowList, right };
+  });
+
+  const truncateText = (text: string, max: number) =>
+    text.length > max ? `${text.slice(0, Math.max(0, max - 1))}…` : text;
+
+  const renderToastStack = () => (
+    <Show when={toasts().length > 0}>
+      <box
+        position="absolute"
+        top={toastAnchor().top}
+        bottom={toastAnchor().bottom}
+        right={toastAnchor().right}
+        width={toastWidth()}
+        flexDirection="column"
+        gap={1}
+        zIndex={2500}
+      >
+        <For each={toasts()}>
+          {(toast) => {
+            const color = () =>
+              toast.kind === "error" ? theme().status.error : theme().status.success;
+            const textWidth = () => toastWidth() - 3;
+            return (
+              <box
+                width="100%"
+                flexDirection="row"
+                flexShrink={0}
+                backgroundColor={theme().mono ? RGBA.fromInts(0, 0, 0, 255) : theme().status.bg}
+                onMouseUp={() => dismissToast(toast.id)}
+              >
+                <box width={1} flexShrink={0} backgroundColor={color()} />
+                <box flexDirection="column" flexGrow={1} paddingLeft={1} paddingRight={1}>
+                  <text fg={color()} attributes={TextAttributes.BOLD} wrapMode="none">
+                    {truncateText(toast.title, textWidth())}
+                  </text>
+                  <Show when={toast.message.length > 0}>
+                    <text fg={theme().status.muted} wrapMode="none">
+                      {truncateText(toast.message, textWidth())}
+                    </text>
+                  </Show>
+                </box>
+              </box>
+            );
+          }}
+        </For>
+      </box>
+    </Show>
+  );
+
   // Modal Dialog listing every keyboard shortcut (F1)
   const renderHelpDialogModal = () => (
     <Show when={helpDialogOpen()}>
@@ -2874,6 +2933,7 @@ export function HstrApp(props: HstrAppProps) {
       {renderSplitExecutionPane()}
       {renderRunDialogModal()}
       {renderEditDialogModal()}
+      {renderToastStack()}
       {renderDeleteDialogModal()}
       {renderHelpDialogModal()}
     </box>

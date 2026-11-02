@@ -97,6 +97,7 @@ export interface OpenCodeThemeTokens {
     selected: RGBA;
     warning: RGBA;
     success: RGBA;
+    error: RGBA;
     view: {
       ranking: RGBA;
       history: RGBA;
@@ -205,6 +206,7 @@ const DARK_TOKENS: OpenCodeThemeTokens = {
     selected: RGBA.fromHex(DDG.link),
     warning: RGBA.fromHex(DDG.yellow),
     success: RGBA.fromHex(DDG.green),
+    error: RGBA.fromHex(DDG.red),
     view: {
       ranking: RGBA.fromHex("#f06a43"),
       history: RGBA.fromHex(DDG.link),
@@ -288,6 +290,7 @@ const LIGHT_TOKENS: OpenCodeThemeTokens = {
     selected: RGBA.fromHex("#2f6bc0"),
     warning: RGBA.fromHex("#9a5a0a"),
     success: RGBA.fromHex("#2e7d46"),
+    error: RGBA.fromHex("#b3261e"),
     view: {
       ranking: RGBA.fromHex("#b4560f"),
       history: RGBA.fromHex("#2f6bc0"),
@@ -375,6 +378,7 @@ const MONO_TOKENS: OpenCodeThemeTokens = {
     selected: MONO_FG,
     warning: MONO_FG,
     success: MONO_FG,
+    error: MONO_FG,
     view: {
       ranking: MONO_FG,
       history: MONO_FG,
