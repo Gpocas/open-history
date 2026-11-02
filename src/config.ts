@@ -73,9 +73,6 @@ export const HELP_STRING = [
   "",
 ].join("\n");
 
-export const LABEL_HELP =
-  "Type to filter, UP/DOWN move, RET/TAB select, DEL remove, C-f add favorite, C-g cancel";
-
 export interface HstrConfig {
   theme: HstrTheme;
   hicolor: boolean;

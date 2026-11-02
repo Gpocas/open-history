@@ -386,7 +386,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
 
     await setup.renderOnce();
     let frame = setup.captureCharFrame();
-    expect(frame).toContain("Type to filter, UP/DOWN move");
+    expect(frame).not.toContain("Type to filter");
     expect(frame).toContain(`▪ v${pkg.version}`);
     expect(frame).toContain("‹ranking›");
     expect(frame).toContain("git status");
@@ -794,7 +794,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     const favorites = new FavoriteItems();
     let selectedOutcome: HstrSelectionOutcome | null = null;
 
-    // Height 12 leaves 5 visible list rows
+    // Height 12 leaves 6 visible list rows
     const setup = await testRender(
       () => (
         <HstrApp
@@ -814,10 +814,10 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     let frame = setup.captureCharFrame();
     expect(frame).toContain("25/25 matches");
     expect(frame).toContain("cmd-item-1");
-    expect(frame).toContain("cmd-item-5");
-    expect(frame).not.toContain("cmd-item-6");
+    expect(frame).toContain("cmd-item-6");
+    expect(frame).not.toContain("cmd-item-7");
 
-    // Press Down 8 times -> moves from prompt (-1) to index 7 (cmd-item-8), scrolling past the initial 5 visible rows
+    // Press Down 8 times -> moves from prompt (-1) to index 7 (cmd-item-8), scrolling past the initial 6 visible rows
     for (let i = 0; i < 8; i++) {
       setup.mockInput.pressArrow("down");
       await setup.renderOnce();
@@ -891,15 +891,15 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     const frame = setup.captureCharFrame();
     expect(frame).toContain("SECRET_TARGET_TOKEN");
 
-    // Verify the rendered list row span (second match after the <input> row) has the blue foreground (#82b4fb) and blue background (#0f3364)
+    // Verify the rendered list row span (second match after the <input> row) has the light-blue foreground (#adc2fc) and blue-tinted background (#1f2738)
     const captured = setup.captureSpans();
     const matchedSpans = captured.lines
       .flatMap((l) => l.spans)
       .filter((s) => s.text.includes("SECRET_TARGET_TOKEN"));
     const listRowSpan = matchedSpans[1];
     expect(listRowSpan).toBeDefined();
-    expect(listRowSpan?.fg.toInts().slice(0, 3)).toEqual([0x82, 0xb4, 0xfb]);
-    expect(listRowSpan?.bg.toInts().slice(0, 3)).toEqual([0x0f, 0x33, 0x64]);
+    expect(listRowSpan?.fg.toInts().slice(0, 3)).toEqual([0xad, 0xc2, 0xfc]);
+    expect(listRowSpan?.bg.toInts().slice(0, 3)).toEqual([0x1f, 0x27, 0x38]);
 
     setup.renderer.destroy();
   });

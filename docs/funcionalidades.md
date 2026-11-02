@@ -9,7 +9,7 @@
 
 ## Destaque Visual em Azul & Janela Inteligente para Comandos Grandes
 
-- Os termos encontrados são destacados em **azul brilhante em negrito** (`#82b4fb` sobre `#0f3364`).
+- Os termos encontrados são destacados em **azul brilhante em negrito** (`#adc2fc` sobre `#1f2738`).
 - Em comandos muito extensos, a janela de elisão (`...`) se desloca automaticamente para centralizar o trecho onde o termo foi encontrado, evitando que o match fique oculto.
 
 ## Dialog `Run Command` & Split Pane In-TUI (estilo tmux)

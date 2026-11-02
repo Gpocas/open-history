@@ -15,7 +15,6 @@ import {
   HstrCase,
   HstrMatch,
   HstrView,
-  LABEL_HELP,
   type HstrConfig,
 } from "./config.ts";
 import type { FavoriteItems } from "./favorites.ts";
@@ -466,13 +465,12 @@ export function HstrApp(props: HstrAppProps) {
   });
 
   const inputRowsCount = createMemo(() => (showBoxedInput() ? 3 : 1));
-  const helpRowsCount = createMemo(() => (props.config.hideBasicHelp ? 0 : 1));
   const footerRowsCount = createMemo(() => (showFooterBand() ? 1 : 0));
 
   const maxHistoryItems = createMemo(() => {
     const h = historyPaneHeight();
     const used =
-      headerRowsCount() + inputRowsCount() + helpRowsCount() + footerRowsCount();
+      headerRowsCount() + inputRowsCount() + footerRowsCount();
     return Math.max(1, h - used);
   });
 
@@ -1445,9 +1443,9 @@ export function HstrApp(props: HstrAppProps) {
   const viewShortcutLabel = () => (process.platform === "darwin" ? "C-w" : "C-/");
 
   const viewOptions = [
-    { view: HstrView.RANKING, label: "ranking", color: () => theme().categorical.ranking },
-    { view: HstrView.HISTORY, label: "recents", color: () => theme().categorical.history },
-    { view: HstrView.FAVORITES, label: "favorites", color: () => theme().categorical.favorites },
+    { view: HstrView.RANKING, label: "ranking", color: () => theme().status.view.ranking },
+    { view: HstrView.HISTORY, label: "recents", color: () => theme().status.view.history },
+    { view: HstrView.FAVORITES, label: "favorites", color: () => theme().status.view.favorites },
   ];
 
   // Row 1: Interactive View Mode Select (`‹ranking›` | `recents` | `favorites`) + counters
@@ -1460,17 +1458,17 @@ export function HstrApp(props: HstrAppProps) {
       paddingRight={1}
       flexDirection="row"
       justifyContent="space-between"
-      backgroundColor={theme().background.raised.high}
+      backgroundColor={theme().status.bg}
     >
       <box flexDirection="row" gap={1} flexShrink={0}>
-        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
+        <text fg={theme().status.faint} wrapMode="none" flexShrink={0}>
           {"view:▾"}
         </text>
         <For each={viewOptions}>
           {(opt) => (
             <box flexShrink={0} onMouseUp={() => selectViewMode(opt.view)}>
               <text
-                fg={view() === opt.view ? opt.color() : theme().text.muted}
+                fg={view() === opt.view ? opt.color() : theme().status.muted}
                 attributes={view() === opt.view ? TextAttributes.BOLD : 0}
                 wrapMode="none"
               >
@@ -1479,16 +1477,16 @@ export function HstrApp(props: HstrAppProps) {
             </box>
           )}
         </For>
-        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
+        <text fg={theme().status.faint} wrapMode="none" flexShrink={0}>
           {`(${viewShortcutLabel()})`}
         </text>
       </box>
       <box flexDirection="row" gap={1} flexShrink={0}>
-        <text fg={theme().text.muted} wrapMode="none" flexShrink={0}>
+        <text fg={theme().status.muted} wrapMode="none" flexShrink={0}>
           {`${props.history.count}/${props.history.rawCount}/${props.favorites.count}`}
         </text>
         <text
-          fg={theme().text.faint}
+          fg={theme().status.faint}
           wrapMode="none"
           flexShrink={0}
           onMouseUp={() =>
@@ -1517,18 +1515,18 @@ export function HstrApp(props: HstrAppProps) {
       paddingRight={1}
       flexDirection="row"
       justifyContent="space-between"
-      backgroundColor={theme().background.raised.base}
+      backgroundColor={theme().status.bg}
     >
       <box flexDirection="row" gap={1} flexShrink={0}>
-        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
+        <text fg={theme().status.faint} wrapMode="none" flexShrink={0}>
           {"match:▾"}
         </text>
         <box flexShrink={0} onMouseUp={() => selectMatchMode(HstrMatch.KEYWORDS)}>
           <text
             fg={
               matching() === HstrMatch.KEYWORDS
-                ? theme().text.formfield.selected
-                : theme().text.muted
+                ? theme().status.selected
+                : theme().status.muted
             }
             attributes={matching() === HstrMatch.KEYWORDS ? TextAttributes.BOLD : 0}
             wrapMode="none"
@@ -1540,8 +1538,8 @@ export function HstrApp(props: HstrAppProps) {
           <text
             fg={
               matching() === HstrMatch.SUBSTRING
-                ? theme().text.formfield.selected
-                : theme().text.muted
+                ? theme().status.selected
+                : theme().status.muted
             }
             attributes={matching() === HstrMatch.SUBSTRING ? TextAttributes.BOLD : 0}
             wrapMode="none"
@@ -1553,8 +1551,8 @@ export function HstrApp(props: HstrAppProps) {
           <text
             fg={
               matching() === HstrMatch.REGEXP
-                ? theme().text.formfield.selected
-                : theme().text.muted
+                ? theme().status.selected
+                : theme().status.muted
             }
             attributes={matching() === HstrMatch.REGEXP ? TextAttributes.BOLD : 0}
             wrapMode="none"
@@ -1562,7 +1560,7 @@ export function HstrApp(props: HstrAppProps) {
             {matching() === HstrMatch.REGEXP ? "‹regexp›" : " regexp "}
           </text>
         </box>
-        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
+        <text fg={theme().status.faint} wrapMode="none" flexShrink={0}>
           {"(C-e)"}
         </text>
       </box>
@@ -1574,14 +1572,14 @@ export function HstrApp(props: HstrAppProps) {
               label: "case",
               shortcut: "C-t",
               checked: () => caseSensitive() === HstrCase.SENSITIVE,
-              color: () => theme().text.feedback.warning,
+              color: () => theme().status.warning,
               toggle: toggleCaseCheckbox,
             },
             {
               label: "dedup",
               shortcut: "C-d",
               checked: () => deduplicate(),
-              color: () => theme().text.feedback.success,
+              color: () => theme().status.success,
               toggle: toggleDeduplicateCheckbox,
             },
           ]}
@@ -1589,13 +1587,13 @@ export function HstrApp(props: HstrAppProps) {
           {(opt) => (
             <box flexDirection="row" gap={1} flexShrink={0} onMouseUp={opt.toggle}>
               <text
-                fg={opt.checked() ? opt.color() : theme().text.muted}
+                fg={opt.checked() ? opt.color() : theme().status.muted}
                 attributes={opt.checked() ? TextAttributes.BOLD : 0}
                 wrapMode="none"
               >
                 {`${opt.checked() ? "[x]" : "[ ]"} ${opt.label}`}
               </text>
-              <text fg={theme().text.faint} wrapMode="none">
+              <text fg={theme().status.faint} wrapMode="none">
                 {`(${opt.shortcut})`}
               </text>
             </box>
@@ -1607,8 +1605,8 @@ export function HstrApp(props: HstrAppProps) {
 
   const renderHeaderBlock = () => (
     <Show
-      when={!(props.config.hideBasicHelp && activeNotification().type !== "none")}
-      fallback={renderHelpOrNotificationRow()}
+      when={showFooterBand() || notificationBanner() === null}
+      fallback={renderNotificationRow()}
     >
       <box flexDirection="column" width="100%" flexShrink={0}>
         {renderViewRow()}
@@ -1752,103 +1750,85 @@ export function HstrApp(props: HstrAppProps) {
     </Show>
   );
 
-  const helpBannerState = createMemo(() => {
+  // Transient notification (favorite added, copied, deleted, regexp error) shown in the footer
+  const notificationBanner = createMemo(() => {
     const notif = activeNotification();
-    const w = Math.max(1, historyPaneWidth() - 3);
     const t = theme();
 
     if (notif.type === "deleted" || notif.type === "regexp-error") {
-      return {
-        isAlert: true,
-        rail: t.text.feedback.error,
-        fg: t.text.feedback.error,
-        bg: t.background.feedback.error,
-        text: notif.text.slice(0, w),
-      };
+      return { fg: t.text.feedback.error, bg: t.background.feedback.error, text: notif.text };
     }
-
     if (notif.type === "favorite-added" || notif.type === "copied") {
-      return {
-        isAlert: true,
-        rail: t.text.feedback.success,
-        fg: t.text.feedback.success,
-        bg: t.background.feedback.success,
-        text: notif.text.slice(0, w),
-      };
+      return { fg: t.text.feedback.success, bg: t.background.feedback.success, text: notif.text };
     }
-
-    return {
-      isAlert: false,
-      rail: t.border.base,
-      fg: t.text.faint,
-      bg: t.background.raised.base,
-      text: LABEL_HELP.slice(0, w),
-    };
+    return null;
   });
 
-  const renderHelpOrNotificationRow = () => (
-    <box
-      height={1}
-      width="100%"
-      flexShrink={0}
-      paddingRight={1}
-      flexDirection="row"
-      backgroundColor={helpBannerState().bg}
-    >
-      <text
-        width={2}
-        flexShrink={0}
-        fg={helpBannerState().rail}
-        attributes={TextAttributes.BOLD}
-        wrapMode="none"
-      >
-        {helpBannerState().isAlert ? (theme().mono ? "! " : "┃ ") : "  "}
-      </text>
-      <text
-        wrapMode="none"
-        flexShrink={1}
-        fg={helpBannerState().fg}
-        attributes={helpBannerState().isAlert ? TextAttributes.BOLD : 0}
-      >
-        {helpBannerState().text}
-      </text>
-    </box>
+  const renderNotificationRow = () => (
+    <Show when={notificationBanner()}>
+      {(banner) => (
+        <box
+          height={1}
+          width="100%"
+          flexShrink={0}
+          paddingRight={1}
+          flexDirection="row"
+          backgroundColor={banner().bg}
+        >
+          <text
+            width={2}
+            flexShrink={0}
+            fg={banner().fg}
+            attributes={TextAttributes.BOLD}
+            wrapMode="none"
+          >
+            {theme().mono ? "! " : "┃ "}
+          </text>
+          <text wrapMode="none" flexShrink={1} fg={banner().fg} attributes={TextAttributes.BOLD}>
+            {banner().text}
+          </text>
+        </box>
+      )}
+    </Show>
   );
 
-  // OpenCode-styled bottom footer band: version + help on the left, primary shortcuts on the right
+  // OpenCode-styled bottom footer band: version + help on the left, primary shortcuts on the right.
+  // While a notification is active it takes over the whole band.
   const renderFooterBand = () => (
-    <box
-      height={1}
-      width="100%"
-      paddingLeft={1}
-      paddingRight={1}
-      flexDirection="row"
-      justifyContent="space-between"
-      backgroundColor={theme().background.raised.high}
-      flexShrink={0}
-    >
-      <box flexDirection="row" gap={2} flexShrink={0}>
-        <text fg={theme().text.base} attributes={TextAttributes.BOLD} wrapMode="none" flexShrink={0}>
-          {theme().mono ? `- v${pkg.version} -` : `▪ v${pkg.version}`}
-        </text>
-        <text wrapMode="none" flexShrink={0} onMouseUp={openHelpDialog}>
-          <span style={{ fg: theme().text.base }}>{"help"}</span>
-          <span style={{ fg: theme().text.faint }}>{" f1"}</span>
+    <Show when={notificationBanner() === null} fallback={renderNotificationRow()}>
+      <box
+        height={1}
+        width="100%"
+        paddingLeft={1}
+        paddingRight={1}
+        flexDirection="row"
+        justifyContent="space-between"
+        backgroundColor={theme().status.bg}
+        flexShrink={0}
+      >
+        <box flexDirection="row" gap={2} flexShrink={0}>
+          <text fg={theme().status.text} attributes={TextAttributes.BOLD} wrapMode="none" flexShrink={0}>
+            {theme().mono ? `- v${pkg.version} -` : `▪ v${pkg.version}`}
+          </text>
+          <text wrapMode="none" flexShrink={0} onMouseUp={openHelpDialog}>
+            <span style={{ fg: theme().status.text }}>{"help"}</span>
+            <span style={{ fg: theme().status.faint }}>{" f1"}</span>
+          </text>
+        </box>
+        <text wrapMode="none" flexShrink={1}>
+          <span style={{ fg: theme().status.text }}>{"move"}</span>
+          <span style={{ fg: theme().status.faint }}>{" ↑/↓ · "}</span>
+          <span style={{ fg: theme().status.text }}>{"run"}</span>
+          <span style={{ fg: theme().status.faint }}>{" enter · "}</span>
+          <span style={{ fg: theme().status.text }}>{"edit"}</span>
+          <span style={{ fg: theme().status.faint }}>{" tab · "}</span>
+          <span style={{ fg: theme().status.text }}>{"fav"}</span>
+          <span style={{ fg: theme().status.faint }}>{" ctrl+f · "}</span>
+          <span style={{ fg: theme().status.text }}>{"delete"}</span>
+          <span style={{ fg: theme().status.faint }}>{" del"}</span>
         </text>
       </box>
-      <text wrapMode="none" flexShrink={1}>
-        <span style={{ fg: theme().text.base }}>{"move"}</span>
-        <span style={{ fg: theme().text.faint }}>{" ↑/↓ · "}</span>
-        <span style={{ fg: theme().text.base }}>{"run"}</span>
-        <span style={{ fg: theme().text.faint }}>{" enter · "}</span>
-        <span style={{ fg: theme().text.base }}>{"edit"}</span>
-        <span style={{ fg: theme().text.faint }}>{" tab · "}</span>
-        <span style={{ fg: theme().text.base }}>{"fav"}</span>
-        <span style={{ fg: theme().text.faint }}>{" ctrl+f · "}</span>
-        <span style={{ fg: theme().text.base }}>{"delete"}</span>
-        <span style={{ fg: theme().text.faint }}>{" del"}</span>
-      </text>
-    </box>
+    </Show>
   );
 
   const displayRows = createMemo(() => {
@@ -2107,7 +2087,6 @@ export function HstrApp(props: HstrAppProps) {
       <Show when={!props.config.promptBottom && !props.config.helpOnOppositeSide}>
         <Show when={!props.config.hideHistoryHelp}>{renderHeaderBlock()}</Show>
         {renderPromptRow()}
-        <Show when={!props.config.hideBasicHelp}>{renderHelpOrNotificationRow()}</Show>
         {renderItemsBlock()}
         <Show when={showFooterBand()}>{renderFooterBand()}</Show>
       </Show>
@@ -2116,21 +2095,18 @@ export function HstrApp(props: HstrAppProps) {
         {renderPromptRow()}
         {renderItemsBlock()}
         <Show when={!props.config.hideHistoryHelp}>{renderHeaderBlock()}</Show>
-        <Show when={!props.config.hideBasicHelp}>{renderHelpOrNotificationRow()}</Show>
         <Show when={showFooterBand()}>{renderFooterBand()}</Show>
       </Show>
 
       <Show when={props.config.promptBottom && !props.config.helpOnOppositeSide}>
         {renderItemsBlock()}
         <Show when={!props.config.hideHistoryHelp}>{renderHeaderBlock()}</Show>
-        <Show when={!props.config.hideBasicHelp}>{renderHelpOrNotificationRow()}</Show>
         {renderPromptRow()}
         <Show when={showFooterBand()}>{renderFooterBand()}</Show>
       </Show>
 
       <Show when={props.config.promptBottom && props.config.helpOnOppositeSide}>
         <Show when={!props.config.hideHistoryHelp}>{renderHeaderBlock()}</Show>
-        <Show when={!props.config.hideBasicHelp}>{renderHelpOrNotificationRow()}</Show>
         {renderItemsBlock()}
         {renderPromptRow()}
         <Show when={showFooterBand()}>{renderFooterBand()}</Show>

@@ -87,74 +87,129 @@ export interface OpenCodeThemeTokens {
     fg: RGBA;
     bg: RGBA;
   };
+  // Status bars (view row, match row and footer) have their own palette so they stand
+  // apart from the history list
+  status: {
+    bg: RGBA;
+    text: RGBA;
+    muted: RGBA;
+    faint: RGBA;
+    selected: RGBA;
+    warning: RGBA;
+    success: RGBA;
+    view: {
+      ranking: RGBA;
+      history: RGBA;
+      favorites: RGBA;
+    };
+  };
 }
+
+// Dark palette extracted from DuckDuckGo's dark theme:
+// page #181818, header #161616, chrome #1d1b1f, search box #333333 (toned down to #212123
+// for the input so it doesn't stand out from the rest of the TUI), divider #2d2d2d,
+// text #e8e8e8 / #aaaaaa, links #84aefc / #adc2fc, visited #a591dc, brand orange #de5833.
+const DDG = {
+  bgPage: "#181818",
+  bgHeader: "#161616",
+  bgChrome: "#1d1b1f",
+  bgSearch: "#333333",
+  bgInput: "#212123",
+  bgSelected: "#26292f",
+  divider: "#2d2d2d",
+  text: "#e8e8e8",
+  textMuted: "#aaaaaa",
+  textFaint: "#67666a",
+  textDisabled: "#4a494d",
+  link: "#84aefc",
+  linkLight: "#adc2fc",
+  visited: "#a591dc",
+  orange: "#de5833",
+  red: "#f0686b",
+  yellow: "#e8b45c",
+  green: "#72cf8f",
+} as const;
 
 const DARK_TOKENS: OpenCodeThemeTokens = {
   mode: "dark",
   mono: false,
   text: {
-    base: RGBA.fromHex("#eeeeee"),
-    muted: RGBA.fromHex("#808080"),
-    faint: RGBA.fromHex("#5a5a5a"),
+    base: RGBA.fromHex(DDG.text),
+    muted: RGBA.fromHex(DDG.textMuted),
+    faint: RGBA.fromHex(DDG.textFaint),
     action: {
       primary: {
-        base: RGBA.fromHex("#eeeeee"),
+        base: RGBA.fromHex(DDG.text),
         focused: RGBA.fromHex("#ffffff"),
-        selected: RGBA.fromHex("#fab283"),
-        disabled: RGBA.fromHex("#4c4c4c"),
+        selected: RGBA.fromHex(DDG.link),
+        disabled: RGBA.fromHex(DDG.textDisabled),
       },
       secondary: {
-        base: RGBA.fromHex("#808080"),
-        focused: RGBA.fromHex("#fab283"),
+        base: RGBA.fromHex(DDG.textMuted),
+        focused: RGBA.fromHex(DDG.link),
       },
     },
     formfield: {
-      base: RGBA.fromHex("#eeeeee"),
-      focused: RGBA.fromHex("#fab283"),
-      selected: RGBA.fromHex("#7699fe"),
+      base: RGBA.fromHex(DDG.text),
+      focused: RGBA.fromHex(DDG.text),
+      selected: RGBA.fromHex(DDG.link),
     },
     feedback: {
-      error: RGBA.fromHex("#e06c75"),
-      warning: RGBA.fromHex("#f5a742"),
-      success: RGBA.fromHex("#7fd88f"),
-      info: RGBA.fromHex("#56b6c2"),
+      error: RGBA.fromHex(DDG.red),
+      warning: RGBA.fromHex(DDG.yellow),
+      success: RGBA.fromHex(DDG.green),
+      info: RGBA.fromHex(DDG.linkLight),
     },
   },
   background: {
-    base: RGBA.fromHex("#0a0a0a"),
+    base: RGBA.fromHex(DDG.bgPage),
     raised: {
-      base: RGBA.fromHex("#141414"),
-      high: RGBA.fromHex("#1e1e1e"),
-      max: RGBA.fromHex("#282828"),
+      base: RGBA.fromHex(DDG.bgHeader),
+      high: RGBA.fromHex(DDG.bgChrome),
+      max: RGBA.fromHex(DDG.bgSearch),
     },
     action: {
       primary: {
-        focused: RGBA.fromHex("#232936"),
-        hovered: RGBA.fromHex("#1a1a1a"),
+        focused: RGBA.fromHex(DDG.bgSelected),
+        hovered: RGBA.fromHex(DDG.divider),
       },
     },
     formfield: {
-      base: RGBA.fromHex("#141414"),
-      focused: RGBA.fromHex("#1b1b1b"),
+      base: RGBA.fromHex(DDG.divider),
+      focused: RGBA.fromHex(DDG.bgInput),
     },
     feedback: {
-      error: RGBA.fromHex("#37222c"),
-      warning: RGBA.fromHex("#332614"),
-      success: RGBA.fromHex("#1b2e23"),
-      info: RGBA.fromHex("#1b2b34"),
+      error: RGBA.fromHex("#3a2224"),
+      warning: RGBA.fromHex("#352c1c"),
+      success: RGBA.fromHex("#1d3125"),
+      info: RGBA.fromHex("#1f2738"),
     },
   },
   border: {
-    base: RGBA.fromHex("#303030"),
+    base: RGBA.fromHex(DDG.divider),
   },
   categorical: {
-    ranking: RGBA.fromHex("#fab283"),
-    history: RGBA.fromHex("#5c9cf5"),
-    favorites: RGBA.fromHex("#9d7cd8"),
+    ranking: RGBA.fromHex(DDG.orange),
+    history: RGBA.fromHex(DDG.link),
+    favorites: RGBA.fromHex(DDG.visited),
   },
   matchHighlight: {
-    fg: RGBA.fromHex("#82b4fb"),
-    bg: RGBA.fromHex("#0f3364"),
+    fg: RGBA.fromHex(DDG.linkLight),
+    bg: RGBA.fromHex("#1f2738"),
+  },
+  status: {
+    bg: RGBA.fromHex("#24222c"),
+    text: RGBA.fromHex(DDG.text),
+    muted: RGBA.fromHex("#b4b1bd"),
+    faint: RGBA.fromHex("#85828f"),
+    selected: RGBA.fromHex(DDG.link),
+    warning: RGBA.fromHex(DDG.yellow),
+    success: RGBA.fromHex(DDG.green),
+    view: {
+      ranking: RGBA.fromHex("#f06a43"),
+      history: RGBA.fromHex(DDG.link),
+      favorites: RGBA.fromHex(DDG.visited),
+    },
   },
 };
 
@@ -224,6 +279,20 @@ const LIGHT_TOKENS: OpenCodeThemeTokens = {
   matchHighlight: {
     fg: RGBA.fromHex("#226bcc"),
     bg: RGBA.fromHex("#d4e5fd"),
+  },
+  status: {
+    bg: RGBA.fromHex("#e6e4ec"),
+    text: RGBA.fromHex("#1a1a1a"),
+    muted: RGBA.fromHex("#55525e"),
+    faint: RGBA.fromHex("#77737f"),
+    selected: RGBA.fromHex("#2f6bc0"),
+    warning: RGBA.fromHex("#9a5a0a"),
+    success: RGBA.fromHex("#2e7d46"),
+    view: {
+      ranking: RGBA.fromHex("#b4560f"),
+      history: RGBA.fromHex("#2f6bc0"),
+      favorites: RGBA.fromHex("#6a4aa5"),
+    },
   },
 };
 
@@ -297,6 +366,20 @@ const MONO_TOKENS: OpenCodeThemeTokens = {
   matchHighlight: {
     fg: MONO_FG,
     bg: MONO_BG,
+  },
+  status: {
+    bg: MONO_BG,
+    text: MONO_FG,
+    muted: MONO_MUTED,
+    faint: MONO_MUTED,
+    selected: MONO_FG,
+    warning: MONO_FG,
+    success: MONO_FG,
+    view: {
+      ranking: MONO_FG,
+      history: MONO_FG,
+      favorites: MONO_FG,
+    },
   },
 };
 
