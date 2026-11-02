@@ -1828,7 +1828,7 @@ export function HstrApp(props: HstrAppProps) {
       flexShrink={0}
     >
       <box flexDirection="row" gap={2} flexShrink={0}>
-        <text fg={accent()} attributes={TextAttributes.BOLD} wrapMode="none" flexShrink={0}>
+        <text fg={theme().text.base} attributes={TextAttributes.BOLD} wrapMode="none" flexShrink={0}>
           {theme().mono ? `- v${pkg.version} -` : `▪ v${pkg.version}`}
         </text>
         <text wrapMode="none" flexShrink={0} onMouseUp={openHelpDialog}>
