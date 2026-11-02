@@ -1,11 +1,10 @@
 import { dlopen, FFIType, ptr } from "bun:ffi";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { homedir, hostname as osHostname, tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CliRenderer } from "@opentui/core";
 
 const ZSH_META = 0x83;
-const PROC_HOSTNAME = "/proc/sys/kernel/hostname";
 const TIOCSTI = 0x5412n;
 const TCIOFLUSH = 2;
 
@@ -80,22 +79,6 @@ export function zshUnmetafyString(s: string): string {
 export function getHomeFilePath(filename: string, env: Record<string, string | undefined> = process.env): string {
   const home = env.HOME || homedir();
   return join(home, filename);
-}
-
-export function getHostname(): string {
-  try {
-    if (existsSync(PROC_HOSTNAME)) {
-      const content = readFileSync(PROC_HOSTNAME, "utf-8").trim();
-      if (content) return content;
-    }
-  } catch {
-    // ignore and fallback
-  }
-  try {
-    return osHostname() || "localhost";
-  } catch {
-    return "localhost";
-  }
 }
 
 export function getShellNameByPpid(pid: number = process.ppid, env: Record<string, string | undefined> = process.env): string {

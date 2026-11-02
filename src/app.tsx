@@ -39,7 +39,6 @@ import {
 import { EmptyBorder, resolveOpenHistoryTheme, viewAccentColor } from "./theme.ts";
 import {
   buildShellExecutionSpawn,
-  getHostname,
   openExternalEditor,
   resolveDefaultEditor,
   toggleCase,
@@ -414,15 +413,7 @@ export function HstrApp(props: HstrAppProps) {
     return totalH;
   });
 
-  const promptText = createMemo(() => {
-    const customPrompt = process.env.HSTR_PROMPT;
-    if (customPrompt && customPrompt.length > 0) {
-      return customPrompt;
-    }
-    const user = process.env.USER || "me";
-    const host = getHostname();
-    return `${user}@${host}$ `;
-  });
+  const promptText = createMemo(() => process.env.HSTR_PROMPT ?? "");
 
   const showControlsBar = createMemo(
     () => !props.config.hideHistoryHelp && historyPaneHeight() >= 10,
@@ -1592,9 +1583,11 @@ export function HstrApp(props: HstrAppProps) {
               ? "? "
               : "⌕ "}
         </text>
-        <text fg={theme().text.muted} wrapMode="none" flexShrink={0}>
-          {promptText()}
-        </text>
+        <Show when={promptText().length > 0}>
+          <text fg={theme().text.muted} wrapMode="none" flexShrink={0}>
+            {promptText()}
+          </text>
+        </Show>
         <input
           flexGrow={1}
           value={initialPattern}
