@@ -25,7 +25,7 @@ Todos os seletores, checkboxes e itens da lista também funcionam com o mouse.
 
 ## Temas
 
-- **Escuro (padrão):** paleta baseada no tema escuro do DuckDuckGo. Lista em `#181818`, input em `#212123` e linhas de status (view, match, rodapé) em `#2d2d2d`. Cada view tem sua cor: `ranking` laranja, `recents` azul e `favorites` roxo.
+- **Escuro (padrão):** paleta baseada no tema escuro do DuckDuckGo. Lista em `#181818`; input e linhas de status (view, match, rodapé) em `#212123`. Cada view tem sua cor: `ranking` laranja, `recents` azul e `favorites` roxo.
 - **Monocromático:** sem cores nem fundos, com alternativas em ASCII para alguns símbolos. Ative com `HSTR_CONFIG=monochromatic`.
 
 ## Destaque dos Termos & Janela Inteligente para Comandos Grandes

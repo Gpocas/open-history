@@ -88,7 +88,7 @@ export interface OpenCodeThemeTokens {
     bg: RGBA;
   };
   // Status bars (view row, match row and footer) have their own palette so they stand
-  // apart from the history list. Dark: DDG's neutral divider grey #2d2d2d.
+  // apart from the history list. They share the search input background.
   status: {
     bg: RGBA;
     // Floating surfaces over the bars (toasts), one step lighter so they don't merge with them
@@ -201,7 +201,7 @@ const DARK_TOKENS: OpenCodeThemeTokens = {
     bg: RGBA.fromHex("#1f2738"),
   },
   status: {
-    bg: RGBA.fromHex(DDG.divider),
+    bg: RGBA.fromHex(DDG.bgInput),
     raised: RGBA.fromHex("#383838"),
     text: RGBA.fromHex(DDG.text),
     muted: RGBA.fromHex("#b0b0b0"),
@@ -286,7 +286,7 @@ const LIGHT_TOKENS: OpenCodeThemeTokens = {
     bg: RGBA.fromHex("#d4e5fd"),
   },
   status: {
-    bg: RGBA.fromHex("#e6e6e6"),
+    bg: RGBA.fromHex("#eeeeee"),
     raised: RGBA.fromHex("#d4d4d4"),
     text: RGBA.fromHex("#1a1a1a"),
     muted: RGBA.fromHex("#555555"),
