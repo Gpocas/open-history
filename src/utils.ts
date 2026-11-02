@@ -371,7 +371,16 @@ export function getZshInstallCode(isTiocsti = false, cmd = "open-history"): stri
   const prefix = [
     "",
     "# open-history (HSTR) configuration - add this to ~/.zshrc",
-    `alias hh=${cmd}                    # hh to be alias for ${cmd}`,
+    "# hh: opens open-history and places the chosen command in the next prompt via `print -z`",
+    "# (works even when the kernel blocks TIOCSTI, i.e. dev.tty.legacy_tiocsti=0)",
+    "unalias hh 2>/dev/null",
+    "function hh {",
+    "    local HSTR_OUT",
+    `    { HSTR_OUT="$( { </dev/tty ${cmd} "$@"; } 2>&1 1>&3 3>&- )"; } 3>&1;`,
+    '    if [ -n "${HSTR_OUT}" ]; then',
+    '        print -z -- "${HSTR_OUT}"',
+    "    fi",
+    "}",
     "setopt histignorespace           # skip cmds w/ leading space from history",
     "export HSTR_CONFIG=hicolor       # get more colors",
   ].join("\n");
