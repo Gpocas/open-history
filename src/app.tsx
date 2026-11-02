@@ -44,6 +44,41 @@ import {
 } from "./utils.ts";
 
 export const SELECTION_CURSOR_IN_PROMPT = -1;
+
+type HelpDialogRow =
+  | { kind: "section"; title: string }
+  | { kind: "entry"; keys: string; description: string };
+
+const VIEW_CYCLE_KEY = process.platform === "darwin" ? "C-w" : "C-/";
+const CLEAR_KEYS = process.platform === "darwin" ? "C-u" : "C-u / C-w";
+const HELP_DIALOG_KEYS_WIDTH = 23;
+
+const HELP_DIALOG_ROWS: HelpDialogRow[] = [
+  { kind: "section", title: "Navigation" },
+  { kind: "entry", keys: "↑/↓ C-p/C-n C-k/C-j", description: "Move selection" },
+  { kind: "entry", keys: "PgUp / PgDn", description: "Jump 10 items" },
+  { kind: "entry", keys: "C-r", description: "Move to next match" },
+  { kind: "section", title: "Search" },
+  { kind: "entry", keys: "C-e", description: "Cycle match: keywords → exact → regexp" },
+  { kind: "entry", keys: "C-t", description: "Toggle case-sensitive search" },
+  { kind: "entry", keys: "C-d", description: "Toggle duplicate removal" },
+  { kind: "entry", keys: CLEAR_KEYS, description: "Clear search" },
+  { kind: "entry", keys: "C-l", description: "Toggle search text lower/upper case" },
+  { kind: "section", title: "View" },
+  { kind: "entry", keys: VIEW_CYCLE_KEY, description: "Cycle view: ranking → recents → favorites" },
+  { kind: "entry", keys: "M-1 / M-2 / M-3", description: "Show ranking / recents / favorites" },
+  { kind: "section", title: "Actions" },
+  { kind: "entry", keys: "Enter", description: "Run dialog (split, copy, insert in shell)" },
+  { kind: "entry", keys: "Tab / →", description: "Edit dialog (shell prompt or $EDITOR)" },
+  { kind: "entry", keys: "←", description: "Fix command with fc" },
+  { kind: "entry", keys: "M-v / M-h", description: "Run in vertical / horizontal split" },
+  { kind: "entry", keys: "M-x", description: "Close split pane" },
+  { kind: "entry", keys: "C-f", description: "Add to favorites" },
+  { kind: "entry", keys: "Del", description: "Delete from history / favorites" },
+  { kind: "section", title: "General" },
+  { kind: "entry", keys: "F1", description: "Show / hide this help" },
+  { kind: "entry", keys: "Esc / C-g", description: "Close dialog or split, quit" },
+];
 const PG_JUMP_SIZE = 10;
 const SELECTION_PREFIX_MAX_LNG = 512;
 
@@ -304,6 +339,8 @@ export function HstrApp(props: HstrAppProps) {
     const state = deleteDialog();
     return state ? buildDeleteDialogOptions(state) : [];
   });
+  const [helpDialogOpen, setHelpDialogOpen] = createSignal<boolean>(false);
+  const [helpDialogScroll, setHelpDialogScroll] = createSignal<number>(0);
   const [isEditingCommandLine, setIsEditingCommandLine] = createSignal<boolean>(false);
   const [splitPane, setSplitPane] = createSignal<SplitExecutionState | null>(null);
   const [spinnerFrameIdx, setSpinnerFrameIdx] = createSignal<number>(0);
@@ -342,7 +379,8 @@ export function HstrApp(props: HstrAppProps) {
     if (
       runDialogCommand() !== null ||
       editDialogCommand() !== null ||
-      deleteDialog() !== null
+      deleteDialog() !== null ||
+      helpDialogOpen()
     )
       return;
     inputRef.focus();
@@ -424,7 +462,7 @@ export function HstrApp(props: HstrAppProps) {
 
   const headerRowsCount = createMemo(() => {
     if (props.config.hideHistoryHelp) return 0;
-    return showControlsBar() ? 3 : 2;
+    return showControlsBar() ? 2 : 1;
   });
 
   const inputRowsCount = createMemo(() => (showBoxedInput() ? 3 : 1));
@@ -876,11 +914,71 @@ export function HstrApp(props: HstrAppProps) {
     focusInput();
   };
 
+  const openHelpDialog = () => {
+    setHelpDialogScroll(0);
+    setHelpDialogOpen(true);
+  };
+
+  const closeHelpDialog = () => {
+    setHelpDialogOpen(false);
+    focusInput();
+  };
+
+  // Rows of the help list that fit in the terminal (dialog chrome takes 8 rows + 2 margin)
+  const helpDialogVisibleRows = createMemo(() =>
+    Math.max(3, Math.min(HELP_DIALOG_ROWS.length, dimensions().height - 10)),
+  );
+  const helpDialogMaxScroll = createMemo(() =>
+    Math.max(0, HELP_DIALOG_ROWS.length - helpDialogVisibleRows()),
+  );
+  const scrollHelpDialog = (delta: number) => {
+    setHelpDialogScroll((s) => Math.max(0, Math.min(helpDialogMaxScroll(), s + delta)));
+  };
+
   const finish = (outcome: HstrSelectionOutcome) => {
     props.onExit(outcome);
   };
 
   useKeyboard((key) => {
+    // Modal key handling when the Help Dialog is open
+    if (helpDialogOpen()) {
+      key.preventDefault();
+      if (
+        key.name === "escape" ||
+        key.name === "f1" ||
+        (key.ctrl && (key.name === "g" || key.name === "c")) ||
+        (!key.ctrl && key.sequence?.toLowerCase() === "q")
+      ) {
+        closeHelpDialog();
+        return;
+      }
+      if (key.name === "up" || (key.ctrl && (key.name === "p" || key.name === "k"))) {
+        scrollHelpDialog(-1);
+        return;
+      }
+      if (key.name === "down" || (key.ctrl && (key.name === "n" || key.name === "j"))) {
+        scrollHelpDialog(1);
+        return;
+      }
+      if (key.name === "pageup") {
+        scrollHelpDialog(-helpDialogVisibleRows());
+        return;
+      }
+      if (key.name === "pagedown") {
+        scrollHelpDialog(helpDialogVisibleRows());
+        return;
+      }
+      if (key.name === "home") {
+        setHelpDialogScroll(0);
+        return;
+      }
+      if (key.name === "end") {
+        setHelpDialogScroll(helpDialogMaxScroll());
+        return;
+      }
+      return;
+    }
+
     // Modal key handling when the OpenCode Edit Dialog is open
     if (editDialogCommand() !== null) {
       key.preventDefault();
@@ -995,6 +1093,13 @@ export function HstrApp(props: HstrAppProps) {
         if (selectedOpt) triggerDeleteDialogOption(selectedOpt.id);
         return;
       }
+      return;
+    }
+
+    // F1: open the shortcuts Help Dialog
+    if (key.name === "f1") {
+      key.preventDefault();
+      openHelpDialog();
       return;
     }
 
@@ -1339,8 +1444,14 @@ export function HstrApp(props: HstrAppProps) {
 
   const viewShortcutLabel = () => (process.platform === "darwin" ? "C-w" : "C-/");
 
-  // Row 1: Top Header with version, counters and close button
-  const renderHeaderRow = () => (
+  const viewOptions = [
+    { view: HstrView.RANKING, label: "ranking", color: () => theme().categorical.ranking },
+    { view: HstrView.HISTORY, label: "recents", color: () => theme().categorical.history },
+    { view: HstrView.FAVORITES, label: "favorites", color: () => theme().categorical.favorites },
+  ];
+
+  // Row 1: Interactive View Mode Select (`‹ranking›` | `recents` | `favorites`) + counters
+  const renderViewRow = () => (
     <box
       height={1}
       width="100%"
@@ -1351,9 +1462,27 @@ export function HstrApp(props: HstrAppProps) {
       justifyContent="space-between"
       backgroundColor={theme().background.raised.high}
     >
-      <text fg={accent()} attributes={TextAttributes.BOLD} wrapMode="none" flexShrink={0}>
-        {theme().mono ? `- v${pkg.version} -` : `▪ v${pkg.version}`}
-      </text>
+      <box flexDirection="row" gap={1} flexShrink={0}>
+        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
+          {"view:▾"}
+        </text>
+        <For each={viewOptions}>
+          {(opt) => (
+            <box flexShrink={0} onMouseUp={() => selectViewMode(opt.view)}>
+              <text
+                fg={view() === opt.view ? opt.color() : theme().text.muted}
+                attributes={view() === opt.view ? TextAttributes.BOLD : 0}
+                wrapMode="none"
+              >
+                {view() === opt.view ? `‹${opt.label}›` : ` ${opt.label} `}
+              </text>
+            </box>
+          )}
+        </For>
+        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
+          {`(${viewShortcutLabel()})`}
+        </text>
+      </box>
       <box flexDirection="row" gap={1} flexShrink={0}>
         <text fg={theme().text.muted} wrapMode="none" flexShrink={0}>
           {`${props.history.count}/${props.history.rawCount}/${props.favorites.count}`}
@@ -1378,48 +1507,7 @@ export function HstrApp(props: HstrAppProps) {
     </box>
   );
 
-  const viewOptions = [
-    { view: HstrView.RANKING, label: "ranking", color: () => theme().categorical.ranking },
-    { view: HstrView.HISTORY, label: "recents", color: () => theme().categorical.history },
-    { view: HstrView.FAVORITES, label: "favorites", color: () => theme().categorical.favorites },
-  ];
-
-  // Row 2: Interactive View Mode Select (`‹ranking›` | `recents` | `favorites`)
-  const renderViewRow = () => (
-    <box
-      height={1}
-      width="100%"
-      flexShrink={0}
-      paddingLeft={1}
-      paddingRight={1}
-      flexDirection="row"
-      backgroundColor={theme().background.raised.base}
-    >
-      <box flexDirection="row" gap={1} flexShrink={0}>
-        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
-          {"view:▾"}
-        </text>
-        <For each={viewOptions}>
-          {(opt) => (
-            <box flexShrink={0} onMouseUp={() => selectViewMode(opt.view)}>
-              <text
-                fg={view() === opt.view ? opt.color() : theme().text.muted}
-                attributes={view() === opt.view ? TextAttributes.BOLD : 0}
-                wrapMode="none"
-              >
-                {view() === opt.view ? `‹${opt.label}›` : ` ${opt.label} `}
-              </text>
-            </box>
-          )}
-        </For>
-        <text fg={theme().text.faint} wrapMode="none" flexShrink={0}>
-          {`(${viewShortcutLabel()})`}
-        </text>
-      </box>
-    </box>
-  );
-
-  // Row 3: Interactive Match Select + Checkboxes (`[x] case`, `[x] dedup`)
+  // Row 2: Interactive Match Select + Checkboxes (`[x] case`, `[x] dedup`)
   const renderControlsToolbarRow = () => (
     <box
       height={1}
@@ -1523,7 +1611,6 @@ export function HstrApp(props: HstrAppProps) {
       fallback={renderHelpOrNotificationRow()}
     >
       <box flexDirection="column" width="100%" flexShrink={0}>
-        {renderHeaderRow()}
         {renderViewRow()}
         <Show when={showControlsBar()}>{renderControlsToolbarRow()}</Show>
       </box>
@@ -1728,7 +1815,7 @@ export function HstrApp(props: HstrAppProps) {
     </box>
   );
 
-  // OpenCode-styled bottom footer band with primary & secondary shortcut hints
+  // OpenCode-styled bottom footer band: version + help on the left, primary shortcuts on the right
   const renderFooterBand = () => (
     <box
       height={1}
@@ -1740,15 +1827,18 @@ export function HstrApp(props: HstrAppProps) {
       backgroundColor={theme().background.raised.high}
       flexShrink={0}
     >
+      <box flexDirection="row" gap={2} flexShrink={0}>
+        <text fg={accent()} attributes={TextAttributes.BOLD} wrapMode="none" flexShrink={0}>
+          {theme().mono ? `- v${pkg.version} -` : `▪ v${pkg.version}`}
+        </text>
+        <text wrapMode="none" flexShrink={0} onMouseUp={openHelpDialog}>
+          <span style={{ fg: theme().text.base }}>{"help"}</span>
+          <span style={{ fg: theme().text.faint }}>{" f1"}</span>
+        </text>
+      </box>
       <text wrapMode="none" flexShrink={1}>
         <span style={{ fg: theme().text.base }}>{"move"}</span>
         <span style={{ fg: theme().text.faint }}>{" ↑/↓ · "}</span>
-        <span style={{ fg: theme().text.base }}>{"view"}</span>
-        <span style={{ fg: theme().text.faint }}>{` ${viewShortcutLabel()} · `}</span>
-        <span style={{ fg: theme().text.base }}>{"clear"}</span>
-        <span style={{ fg: theme().text.faint }}>{" ctrl+u"}</span>
-      </text>
-      <text wrapMode="none" flexShrink={0}>
         <span style={{ fg: theme().text.base }}>{"run"}</span>
         <span style={{ fg: theme().text.faint }}>{" enter · "}</span>
         <span style={{ fg: theme().text.base }}>{"edit"}</span>
@@ -2531,6 +2621,117 @@ export function HstrApp(props: HstrAppProps) {
     </Show>
   );
 
+  // Modal Dialog listing every keyboard shortcut (F1)
+  const renderHelpDialogModal = () => (
+    <Show when={helpDialogOpen()}>
+      {(() => {
+        const dialogW = () => Math.min(72, Math.max(40, dimensions().width - 4));
+        const visibleRows = () =>
+          HELP_DIALOG_ROWS.slice(
+            helpDialogScroll(),
+            helpDialogScroll() + helpDialogVisibleRows(),
+          );
+        const scrollInfo = () =>
+          helpDialogMaxScroll() > 0
+            ? `${helpDialogScroll() + 1}-${helpDialogScroll() + helpDialogVisibleRows()}/${HELP_DIALOG_ROWS.length} ↑/↓ scroll`
+            : "";
+        return (
+          <box
+            position="absolute"
+            left={0}
+            top={0}
+            width={dimensions().width}
+            height={dimensions().height}
+            alignItems="center"
+            justifyContent="center"
+            zIndex={3000}
+            backgroundColor={RGBA.fromInts(0, 0, 0, 150)}
+            onMouseUp={closeHelpDialog}
+          >
+            <box
+              width={dialogW()}
+              flexDirection="column"
+              border={true}
+              borderColor={accent()}
+              backgroundColor={theme().background.raised.base}
+              paddingTop={1}
+              paddingBottom={1}
+              paddingLeft={2}
+              paddingRight={2}
+              gap={1}
+              onMouseUp={(e: { stopPropagation(): void }) => e.stopPropagation()}
+              onMouseScroll={(e: { scroll?: { direction: string } }) => {
+                if (e.scroll?.direction === "up") scrollHelpDialog(-1);
+                if (e.scroll?.direction === "down") scrollHelpDialog(1);
+              }}
+            >
+              <box flexDirection="row" justifyContent="space-between" width="100%">
+                <text fg={theme().text.base} attributes={TextAttributes.BOLD} wrapMode="none">
+                  {"Keyboard shortcuts"}
+                </text>
+                <text fg={theme().text.faint} wrapMode="none" onMouseUp={closeHelpDialog}>
+                  {"esc"}
+                </text>
+              </box>
+
+              <box flexDirection="column" width="100%" height={helpDialogVisibleRows()}>
+                <For each={visibleRows()}>
+                  {(row) =>
+                    row.kind === "section" ? (
+                      <text
+                        height={1}
+                        fg={accent()}
+                        attributes={TextAttributes.BOLD}
+                        wrapMode="none"
+                      >
+                        {row.title}
+                      </text>
+                    ) : (
+                      <box height={1} width="100%" flexDirection="row">
+                        <text
+                          width={HELP_DIALOG_KEYS_WIDTH}
+                          flexShrink={0}
+                          fg={theme().matchHighlight.fg}
+                          wrapMode="none"
+                        >
+                          {`  ${row.keys}`}
+                        </text>
+                        <text fg={theme().text.base} wrapMode="none" flexShrink={1}>
+                          {row.description}
+                        </text>
+                      </box>
+                    )
+                  }
+                </For>
+              </box>
+
+              <box
+                width="100%"
+                flexDirection="row"
+                justifyContent="space-between"
+                backgroundColor={theme().background.raised.high}
+                paddingLeft={1}
+                paddingRight={1}
+              >
+                <text fg={theme().text.muted} wrapMode="none" flexShrink={1}>
+                  {scrollInfo()}
+                </text>
+                <text
+                  fg={theme().matchHighlight.fg}
+                  attributes={TextAttributes.BOLD}
+                  wrapMode="none"
+                  flexShrink={0}
+                >
+                  {"esc / f1 close"}
+                </text>
+              </box>
+            </box>
+          </box>
+        );
+      })()}
+    </Show>
+  );
+
   // OpenCode-style Modal Dialog for Editing a Command (Command Line vs Default Terminal Editor)
   const renderEditDialogModal = () => (
     <Show when={editDialogCommand()} keyed>
@@ -2698,6 +2899,7 @@ export function HstrApp(props: HstrAppProps) {
       {renderRunDialogModal()}
       {renderEditDialogModal()}
       {renderDeleteDialogModal()}
+      {renderHelpDialogModal()}
     </box>
   );
 }

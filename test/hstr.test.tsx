@@ -503,12 +503,66 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     // Ctrl-/ (\x1f) -> ‹recents›, then ‹favorites›
     setup.mockInput.pressKey("\x1f");
     await setup.renderOnce();
-        expect(setup.captureCharFrame()).toContain("‹recents›");
+    expect(setup.captureCharFrame()).toContain("‹recents›");
 
     setup.mockInput.pressKey("\x1f");
     await setup.renderOnce();
-        expect(setup.captureCharFrame()).toContain("‹favorites›");
+    expect(setup.captureCharFrame()).toContain("‹favorites›");
     expect(setup.captureCharFrame()).toContain("fav command");
+
+    setup.renderer.destroy();
+  });
+
+  test("footer shows version and help; F1 opens and closes the shortcuts dialog", async () => {
+    const config = createDefaultConfig();
+    const history = {
+      items: ["git status"],
+      count: 1,
+      rawItems: ["git status"],
+      rawCount: 1,
+      filePath: "",
+      dirty: false,
+    };
+    const favorites = new FavoriteItems();
+    let exited = false;
+
+    const setup = await testRender(
+      () => (
+        <HstrApp
+          config={config}
+          history={history}
+          favorites={favorites}
+          isZsh={false}
+          onExit={() => {
+            exited = true;
+          }}
+        />
+      ),
+      { width: 80, height: 40 },
+    );
+
+    await setup.renderOnce();
+    let frame = setup.captureCharFrame();
+    const lines = frame.trimEnd().split("\n");
+    const footer = lines[lines.length - 1] ?? "";
+    expect(footer).toContain(`▪ v${pkg.version}`);
+    expect(footer).toContain("help f1");
+    expect(lines[0]).not.toContain(`v${pkg.version}`);
+    expect(frame).not.toContain("Keyboard shortcuts");
+
+    setup.mockInput.pressKey("\u001BOP");
+    await setup.renderOnce();
+    frame = setup.captureCharFrame();
+    expect(frame).toContain("Keyboard shortcuts");
+    expect(frame).toContain("Cycle match: keywords → exact → regexp");
+    expect(frame).toContain("Show / hide this help");
+
+    // A bare ESC is only emitted after the key parser's escape-sequence timeout
+    setup.mockInput.pressEscape();
+    await Bun.sleep(50);
+    await setup.renderOnce();
+    expect(setup.captureCharFrame()).not.toContain("Keyboard shortcuts");
+    expect(exited).toBe(false);
 
     setup.renderer.destroy();
   });
@@ -740,7 +794,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
     const favorites = new FavoriteItems();
     let selectedOutcome: HstrSelectionOutcome | null = null;
 
-    // Height 13 leaves 5 visible list rows
+    // Height 12 leaves 5 visible list rows
     const setup = await testRender(
       () => (
         <HstrApp
@@ -753,7 +807,7 @@ describe("OpenTUI Solid HstrApp interactive tests", () => {
           }}
         />
       ),
-      { width: 80, height: 13 },
+      { width: 80, height: 12 },
     );
 
     await setup.renderOnce();

@@ -5,6 +5,7 @@
 - Tema semântico (`dark`, `light` e `monochromatic`) com suporte completo a teclado e mouse.
 - **Search Input Box** em destaque com `<input>` nativo do OpenTUI, contador `X/Y matches` em tempo real e botão rápido `[× C-u]`.
 - **Selects e Checkboxes Interativos** na barra superior para alternar **View** (`ranking`, `recents`, `favorites`), **Match** (`keywords`, `exact`, `regexp`) e opções (`[x] case`, `[x] dedup`).
+- **Rodapé** com a versão, o atalho do **Help** (`F1`) e os atalhos principais. O Dialog **`Keyboard shortcuts`** lista todos os atalhos (rolagem com `↑`/`↓`, `PgUp`/`PgDn` ou mouse; fecha com `Esc`, `F1` ou `q`).
 
 ## Destaque Visual em Azul & Janela Inteligente para Comandos Grandes
 
@@ -51,4 +52,5 @@ Ao pressionar `Tab` (ou `→` na lista), abre um Dialog com 2 formas de edição
 | **`Del`** | Remove o comando selecionado do histórico (ou dos favoritos) com confirmação `y/n` |
 | **`Ctrl-u` / `Ctrl-w`** ou clique em **`[× C-u]`** | Limpa o texto de busca |
 | **`Ctrl-l`** | Alterna minúsculas/maiúsculas do filtro |
+| **`F1`** ou clique em **`help f1`** | Abre/fecha o Dialog de atalhos |
 | **`Esc` / `Ctrl-g`** | Fecha o Dialog / fecha o Split Pane ativo / cancela e sai da TUI |
